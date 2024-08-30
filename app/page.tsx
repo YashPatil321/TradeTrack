@@ -1,6 +1,7 @@
 "use client"; // This marks the file as a Client Component
 
 import { useEffect } from "react";
+import Link from 'next/link';
 
 export default function Home() {
   useEffect(() => {
@@ -8,7 +9,7 @@ export default function Home() {
     script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c&callback=initMap&v=weekly&solution_channel=GMP_CCS_customcontrols_v2`;
     script.async = true;
     script.defer = true;
-    
+
     window.initMap = function () {
       const map = new window.google.maps.Map(document.getElementById("map"), {
         zoom: 4,
@@ -57,33 +58,38 @@ export default function Home() {
           </div>
           <ul className="flex space-x-4">
             <li>
-              <a href="locator.tsx" className="hover:text-gray-300">Locator</a>
+              <a href="services.tsx" className="hover:text-gray-300">
+                Locator
+              </a>
             </li>
             <li>
-              <a href="about.tsx" className="hover:text-gray-300">About</a>
+            <a href="https://example.com">Go to Example</a>
             </li>
             <li>
-              <a href="services.tsx" className="hover:text-gray-300">Services</a>
+              <a href="about.tsx" className="hover:text-gray-300">
+                About
+              </a>
             </li>
             <li>
-              <a href="contact.tsx" className="hover:text-gray-300">Contact</a>
+              <a href="servicesx.tsx" className="hover:text-gray-300">
+                Services
+              </a>
+            </li>
+            <li>
+              <a href="contact.tsx" className="hover:text-gray-300">
+                Contact
+              </a>
             </li>
           </ul>
         </div>
       </nav>
+      <a href="https://example.com">Go to Example</a>
 
       <main
         className="flex min-h-screen flex-col items-center justify-between p-24"
-        style={{
-          backgroundColor: "#faedc8", // Setting the background color to #faedc8
-        }}
+        style={{ backgroundColor: "#faedc8" }} // Setting the background color to #faedc8
       >
-        <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-          <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-            Welcome To TruckTrack&nbsp;
-          </p>
-        </div>
-        <div id="map" style={{ height: "1000px", width: "100%" }}></div>
+        <div id="map" style={{ height: "800px", width: "75%" }}></div>
       </main>
     </>
   );
