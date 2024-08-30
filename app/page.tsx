@@ -63,15 +63,12 @@ export default function Home() {
               </a>
             </li>
             <li>
-            <a href="https://example.com">Go to Example</a>
-            </li>
-            <li>
-              <a href="about.tsx" className="hover:text-gray-300">
+              <a href="app/about.tsx" className="hover:text-gray-300">
                 About
               </a>
             </li>
             <li>
-              <a href="servicesx.tsx" className="hover:text-gray-300">
+              <a href="app/servicesx.tsx" className="hover:text-gray-300">
                 Services
               </a>
             </li>
@@ -83,7 +80,7 @@ export default function Home() {
           </ul>
         </div>
       </nav>
-      <a href="https://example.com">Go to Example</a>
+
 
       <main
         className="flex min-h-screen flex-col items-center justify-between p-24"
