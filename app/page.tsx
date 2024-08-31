@@ -2,17 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 export default function Home() {
   const [locations, setLocations] = useState([
-    { lat: 40.7128, lng: -74.0060, title: "New York", icon: truckIcon },
-    { lat: 34.0522, lng: -118.2437, title: "Los Angeles", icon: truckIcon },
-    { lat: 29.7604, lng: -95.3698, title: "Houston", icon: truckIcon },
-    { lat: 37.7749, lng: -122.4194, title: "San Francisco", icon: truckIcon },
+    { lat: 40.7128, lng: -74.0060, title: "New York" },
+    { lat: 34.0522, lng: -118.2437, title: "Los Angeles" },
+    { lat: 29.7604, lng: -95.3698, title: "Houston" },
+    { lat: 37.7749, lng: -122.4194, title: "San Francisco" },
   ]);
-  
+
   const router = useRouter();
-  const { lat, lng, title } = router.query;
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const { lat, lng, title } = router.query;
+
+    if (lat && lng && title) {
+      setLocations((prevLocations) => [
+        ...prevLocations,
+        { lat: parseFloat(lat as string), lng: parseFloat(lng as string), title: title as string }
+      ]);
+    }
+  }, [router.isReady, router.query]);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -39,7 +52,7 @@ export default function Home() {
           position: { lat: location.lat, lng: location.lng },
           map: map,
           title: location.title,
-          icon: location.icon, // Use the custom truck icon
+          icon: truckIcon, // Use the custom truck icon
         });
       });
     };
@@ -51,15 +64,6 @@ export default function Home() {
     };
   }, [locations]);
 
-  useEffect(() => {
-    if (lat && lng && title) {
-      setLocations((prevLocations) => [
-        ...prevLocations,
-        { lat: parseFloat(lat as string), lng: parseFloat(lng as string), title: title as string, icon: truckIcon }
-      ]);
-    }
-  }, [lat, lng, title]);
-
   return (
     <>
       <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
@@ -69,24 +73,29 @@ export default function Home() {
           </div>
           <ul className="flex space-x-4">
             <li>
-              <a href="services.tsx" className="hover:text-gray-300">
+              <Link href="/addressInput" className="hover:text-gray-300">
+                Add Truck Location
+              </Link>
+            </li>
+            <li>
+              <Link href="/services" className="hover:text-gray-300">
                 Locator
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="app/about.tsx" className="hover:text-gray-300">
+              <Link href="/about" className="hover:text-gray-300">
                 About
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="app/servicesx.tsx" className="hover:text-gray-300">
+              <Link href="/servicesx" className="hover:text-gray-300">
                 Services
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="contact.tsx" className="hover:text-gray-300">
+              <Link href="/contact" className="hover:text-gray-300">
                 Contact
-              </a>
+              </Link>
             </li>
           </ul>
         </div>

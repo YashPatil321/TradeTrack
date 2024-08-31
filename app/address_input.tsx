@@ -1,73 +1,112 @@
 "use client"; // This marks the file as a Client Component
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useEffect, useState } from "react";
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
-export default function AddressInput() {
-  const [address, setAddress] = useState('');
-  const [error, setError] = useState('');
-  const router = useRouter();
+export default function Home() {
+  const [locations, setLocations] = useState([
+    { lat: 40.7128, lng: -74.0060, title: "New York" },
+    { lat: 34.0522, lng: -118.2437, title: "Los Angeles" },
+    { lat: 29.7604, lng: -95.3698, title: "Houston" },
+    { lat: 37.7749, lng: -122.4194, title: "San Francisco" },
+  ]);
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAddress(e.target.value);
-  };
+  // Using the useSearchParams hook from next/navigation to read query parameters
+  const searchParams = useSearchParams();
+  const lat = searchParams.get('lat');
+  const lng = searchParams.get('lng');
+  const title = searchParams.get('title');
 
-  const geocodeAddress = async (address: string) => {
-    const apiKey = 'AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c'; // Replace with your actual API key
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
-    );
-    const data = await response.json();
-
-    if (data.status === 'OK') {
-      const { lat, lng } = data.results[0].geometry.location;
-      return { lat, lng };
-    } else {
-      setError('Address not found. Please try again.');
-      return null;
+  useEffect(() => {
+    if (lat && lng && title) {
+      setLocations((prevLocations) => [
+        ...prevLocations,
+        { lat: parseFloat(lat as string), lng: parseFloat(lng as string), title: title as string }
+      ]);
     }
-  }
+  }, [lat, lng, title]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c&callback=initMap&v=weekly&solution_channel=GMP_CCS_customcontrols_v2`;
+    script.async = true;
+    script.defer = true;
 
-    const coords = await geocodeAddress(address);
-    if (coords) {
-      // Navigate back to the Home page with the new coordinates in the query params
-      router.push({
-        pathname: '/',
-        query: {
-          lat: coords.lat,
-          lng: coords.lng,
-          title: address,
-        },
+    window.initMap = function () {
+      const map = new window.google.maps.Map(document.getElementById("map"), {
+        zoom: 4,
+        center: { lat: 39.8283, lng: -98.5795 }, // Center of the USA
       });
-    }
-  };
+
+      const truckIcon = {
+        url: 'food-truck.png', // Path to food truck icon
+        scaledSize: new window.google.maps.Size(50, 50),
+        origin: new window.google.maps.Point(0, 0),
+        anchor: new window.google.maps.Point(25, 50),
+      };
+
+      // Create markers for each location
+      locations.forEach((location) => {
+        new window.google.maps.Marker({
+          position: { lat: location.lat, lng: location.lng },
+          map: map,
+          title: location.title,
+          icon: truckIcon, // Use the custom truck icon
+        });
+      });
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, [locations]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100">
-      <h1 className="text-2xl font-bold mb-4">Add New Truck Location</h1>
-      <form onSubmit={handleSubmit} className="w-full max-w-sm">
-        <div className="mb-4">
-          <input
-            type="text"
-            className="w-full p-2 border border-gray-300 rounded"
-            value={address}
-            onChange={handleAddressChange}
-            placeholder="Enter address"
-            required
-          />
+    <>
+      <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="text-xl font-bold">
+            TruckTrack
+          </div>
+          <ul className="flex space-x-4">
+            <li>
+              <Link href="/addressInput" className="hover:text-gray-300">
+                Add Truck Location
+              </Link>
+            </li>
+            <li>
+              <Link href="/services" className="hover:text-gray-300">
+                Locator
+              </Link>
+            </li>
+            <li>
+              <Link href="/about" className="hover:text-gray-300">
+                About
+              </Link>
+            </li>
+            <li>
+              <Link href="/servicesx" className="hover:text-gray-300">
+                Services
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className="hover:text-gray-300">
+                Contact
+              </Link>
+            </li>
+          </ul>
         </div>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-700"
-        >
-          Add Location
-        </button>
-      </form>
-    </div>
+      </nav>
+
+      <main
+        className="flex min-h-screen flex-col items-center justify-between p-24"
+        style={{ backgroundColor: "#faedc8" }} // Setting the background color to #faedc8
+      >
+        <div id="map" style={{ height: "800px", width: "75%" }}></div>
+      </main>
+    </>
   );
 }
