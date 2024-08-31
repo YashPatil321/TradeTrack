@@ -1,9 +1,19 @@
 "use client"; // This marks the file as a Client Component
 
-import { useEffect } from "react";
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import { useRouter } from 'next/router';
 
 export default function Home() {
+  const [locations, setLocations] = useState([
+    { lat: 40.7128, lng: -74.0060, title: "New York", icon: truckIcon },
+    { lat: 34.0522, lng: -118.2437, title: "Los Angeles", icon: truckIcon },
+    { lat: 29.7604, lng: -95.3698, title: "Houston", icon: truckIcon },
+    { lat: 37.7749, lng: -122.4194, title: "San Francisco", icon: truckIcon },
+  ]);
+  
+  const router = useRouter();
+  const { lat, lng, title } = router.query;
+
   useEffect(() => {
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c&callback=initMap&v=weekly&solution_channel=GMP_CCS_customcontrols_v2`;
@@ -23,14 +33,6 @@ export default function Home() {
         anchor: new window.google.maps.Point(25, 50),
       };
 
-      // Array of locations to mark on the map
-      const locations = [
-        { lat: 40.7128, lng: -74.0060, title: "New York", icon: truckIcon }, // New York
-        { lat: 34.0522, lng: -118.2437, title: "Los Angeles", icon: truckIcon }, // Los Angeles
-        { lat: 29.7604, lng: -95.3698, title: "Houston", icon: truckIcon }, // Houston
-        { lat: 37.7749, lng: -122.4194, title: "San Francisco", icon: truckIcon }, // San Francisco
-      ];
-
       // Create markers for each location
       locations.forEach((location) => {
         new window.google.maps.Marker({
@@ -47,7 +49,16 @@ export default function Home() {
     return () => {
       document.head.removeChild(script);
     };
-  }, []);
+  }, [locations]);
+
+  useEffect(() => {
+    if (lat && lng && title) {
+      setLocations((prevLocations) => [
+        ...prevLocations,
+        { lat: parseFloat(lat as string), lng: parseFloat(lng as string), title: title as string, icon: truckIcon }
+      ]);
+    }
+  }, [lat, lng, title]);
 
   return (
     <>
@@ -80,7 +91,6 @@ export default function Home() {
           </ul>
         </div>
       </nav>
-
 
       <main
         className="flex min-h-screen flex-col items-center justify-between p-24"
