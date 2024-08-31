@@ -1,7 +1,7 @@
 "use client"; // This marks the file as a Client Component
 
 import { useEffect, useState } from "react";
-import { useRouter } from 'next/router';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Home() {
@@ -12,20 +12,20 @@ export default function Home() {
     { lat: 37.7749, lng: -122.4194, title: "San Francisco" },
   ]);
 
-  const router = useRouter();
+  // Using the useSearchParams hook from next/navigation to read query parameters
+  const searchParams = useSearchParams();
+  const lat = searchParams.get('lat');
+  const lng = searchParams.get('lng');
+  const title = searchParams.get('title');
 
   useEffect(() => {
-    if (!router.isReady) return;
-
-    const { lat, lng, title } = router.query;
-
     if (lat && lng && title) {
       setLocations((prevLocations) => [
         ...prevLocations,
         { lat: parseFloat(lat as string), lng: parseFloat(lng as string), title: title as string }
       ]);
     }
-  }, [router.isReady, router.query]);
+  }, [lat, lng, title]);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -73,27 +73,27 @@ export default function Home() {
           </div>
           <ul className="flex space-x-4">
             <li>
-              <Link href="/addressInput" className="hover:text-gray-300">
+              <Link href="address_input.tsx" className="hover:text-gray-300">
                 Add Truck Location
               </Link>
             </li>
             <li>
-              <Link href="/services" className="hover:text-gray-300">
+              <Link href="services.tsx" className="hover:text-gray-300">
                 Locator
               </Link>
             </li>
             <li>
-              <Link href="/about" className="hover:text-gray-300">
+              <Link href="about.tsx" className="hover:text-gray-300">
                 About
               </Link>
             </li>
             <li>
-              <Link href="/servicesx" className="hover:text-gray-300">
+              <Link href="services.tsx" className="hover:text-gray-300">
                 Services
               </Link>
             </li>
             <li>
-              <Link href="/contact" className="hover:text-gray-300">
+              <Link href="contact.tsx" className="hover:text-gray-300">
                 Contact
               </Link>
             </li>
