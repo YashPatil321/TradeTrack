@@ -1,32 +1,9 @@
 "use client"; // This marks the file as a Client Component
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from 'next/navigation';
+import { useEffect } from "react";
 import Link from 'next/link';
 
 export default function Home() {
-  const [locations, setLocations] = useState([
-    { lat: 40.7128, lng: -74.0060, title: "New York" },
-    { lat: 34.0522, lng: -118.2437, title: "Los Angeles" },
-    { lat: 29.7604, lng: -95.3698, title: "Houston" },
-    { lat: 37.7749, lng: -122.4194, title: "San Francisco" },
-  ]);
-
-  // Using the useSearchParams hook from next/navigation to read query parameters
-  const searchParams = useSearchParams();
-  const lat = searchParams.get('lat');
-  const lng = searchParams.get('lng');
-  const title = searchParams.get('title');
-
-  useEffect(() => {
-    if (lat && lng && title) {
-      setLocations((prevLocations) => [
-        ...prevLocations,
-        { lat: parseFloat(lat as string), lng: parseFloat(lng as string), title: title as string }
-      ]);
-    }
-  }, [lat, lng, title]);
-
   useEffect(() => {
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c&callback=initMap&v=weekly&solution_channel=GMP_CCS_customcontrols_v2`;
@@ -40,19 +17,22 @@ export default function Home() {
       });
 
       const truckIcon = {
-        url: 'food-truck.png', // Path to food truck icon
+        url: './food-truck.png', // Ensure this path is correct
         scaledSize: new window.google.maps.Size(50, 50),
         origin: new window.google.maps.Point(0, 0),
         anchor: new window.google.maps.Point(25, 50),
       };
 
-      // Create markers for each location
-      locations.forEach((location) => {
+      const savedLocations = JSON.parse(localStorage.getItem('truckLocations') || '[]');
+
+      savedLocations.forEach((location) => {
         new window.google.maps.Marker({
           position: { lat: location.lat, lng: location.lng },
           map: map,
           title: location.title,
           icon: truckIcon, // Use the custom truck icon
+          // Uncomment the below line to test with the default icon
+          // icon: null,
         });
       });
     };
@@ -62,7 +42,7 @@ export default function Home() {
     return () => {
       document.head.removeChild(script);
     };
-  }, [locations]);
+  }, []);
 
   return (
     <>
@@ -73,27 +53,27 @@ export default function Home() {
           </div>
           <ul className="flex space-x-4">
             <li>
-              <Link href="address_input.tsx" className="hover:text-gray-300">
+              <Link href="/address_input" className="hover:text-gray-300">
                 Add Truck Location
               </Link>
             </li>
             <li>
-              <Link href="services.tsx" className="hover:text-gray-300">
+              <Link href="/services" className="hover:text-gray-300">
                 Locator
               </Link>
             </li>
             <li>
-              <Link href="about.tsx" className="hover:text-gray-300">
+              <Link href="/about" className="hover:text-gray-300">
                 About
               </Link>
             </li>
             <li>
-              <Link href="services.tsx" className="hover:text-gray-300">
+              <Link href="/servicesx" className="hover:text-gray-300">
                 Services
               </Link>
             </li>
             <li>
-              <Link href="contact.tsx" className="hover:text-gray-300">
+              <Link href="/contact" className="hover:text-gray-300">
                 Contact
               </Link>
             </li>
