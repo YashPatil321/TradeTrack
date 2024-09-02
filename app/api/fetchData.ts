@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(process.cwd(), 'C:\Users\yashp\trucktrack\delta-deck-433915-q3-1fca1f2d39ba.json'),
+  keyFile: path.join(process.cwd(), 'C:\\Users\\yashp\\trucktrack\\delta-deck-433915-q3-1fca1f2d39ba.json'),
   scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
 });
 
@@ -12,7 +12,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: 'your-spreadsheet-id',
+      spreadsheetId: '1g4ceACw8_xPbDzvk5mbIBLr6hu6KWeSxO_qsogXISEM',
       range: 'Sheet1!A2:C',
     });
 
