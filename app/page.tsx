@@ -3,12 +3,18 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+interface Location {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export default function Home() {
-  const [locations, setLocations] = useState([]);
+  const [locations, setLocations] = useState<Location[]>([]);
 
   useEffect(() => {
     const fetchLocations = async () => {
-      const response = await fetch('/api/getTruckLocations');
+      const response = await fetch('/api/fetchData');
       const data = await response.json();
       setLocations(data);
     };
@@ -34,7 +40,7 @@ export default function Home() {
           map,
           title: location.name,
           icon: {
-            url: 'food-truck.png',
+            url: 'food-truck.png', // Ensure this path is correct
             scaledSize: new window.google.maps.Size(50, 50),
             origin: new window.google.maps.Point(0, 0),
             anchor: new window.google.maps.Point(25, 50),
