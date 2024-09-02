@@ -30,7 +30,7 @@ export default function ManageTrucks() {
               >
                 Update Location
               </button>
-            </div>
+            </div>9
           </li>
         ))}
       </ul>
