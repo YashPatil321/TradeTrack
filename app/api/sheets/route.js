@@ -1,7 +1,8 @@
+import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 
 // Initialize the sheet - doc ID is the long id in the sheets URL
-const doc = new GoogleSpreadsheet('<1g4ceACw8_xPbDzvk5mbIBLr6hu6KWeSxO_qsogXISEM>');
+const doc = new GoogleSpreadsheet('<your-sheet-id>');
 
 async function accessSpreadsheet() {
   await doc.useServiceAccountAuth({
@@ -13,14 +14,16 @@ async function accessSpreadsheet() {
   const sheet = doc.sheetsByIndex[0]; // Index of sheet
   const rows = await sheet.getRows(); // Fetch rows from sheet
 
-  return rows.map(row => row._rawData); // Return raw data
+  const data = rows.map(row => row._rawData); // Return raw data
+  console.log('Fetched rows:', data); // Debugging line
+  return data;
 }
 
-export default async (req, res) => {
+export async function GET() {
   try {
     const data = await accessSpreadsheet();
-    res.status(200).json(data);
+    return NextResponse.json(data);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch data from Google Sheets' });
+    return NextResponse.json({ error: 'Failed to fetch data from Google Sheets' }, { status: 500 });
   }
-};
+}
