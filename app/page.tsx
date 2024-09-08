@@ -3,23 +3,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-interface Location {
-  name: string;
-  lat: number;
-  lng: number;
-}
-
 export default function Home() {
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [locations, setLocations] = useState([]);
 
+  // Fetch trucks from localStorage
   useEffect(() => {
-    const fetchLocations = async () => {
-      const response = await fetch('/api/fetchData');
-      const data = await response.json();
-      setLocations(data);
-    };
-
-    fetchLocations();
+    const storedTrucks = localStorage.getItem('trucks');
+    if (storedTrucks) {
+      setLocations(JSON.parse(storedTrucks));
+    }
   }, []);
 
   useEffect(() => {
@@ -34,13 +26,13 @@ export default function Home() {
         center: { lat: 39.8283, lng: -98.5795 },
       });
 
-      locations.forEach(location => {
+      locations.forEach((location) => {
         const marker = new window.google.maps.Marker({
           position: { lat: location.lat, lng: location.lng },
           map,
           title: location.name,
           icon: {
-            url: 'food-truck.png', // Ensure this path is correct
+            url: 'food-truck.png',
             scaledSize: new window.google.maps.Size(50, 50),
             origin: new window.google.maps.Point(0, 0),
             anchor: new window.google.maps.Point(25, 50),
@@ -108,3 +100,4 @@ export default function Home() {
     </>
   );
 }
+5
