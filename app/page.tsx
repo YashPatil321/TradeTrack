@@ -14,9 +14,10 @@ export default function Home() {
     }
   }, []);
 
+  // Load the Google Maps script and initialize map
   useEffect(() => {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c&callback=initMap&v=weekly&solution_channel=GMP_CCS_customcontrols_v2`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c&callback=initMap&v=weekly`;
     script.async = true;
     script.defer = true;
 
@@ -68,7 +69,7 @@ export default function Home() {
           </div>
           <ul className="flex space-x-4">
             <li>
-              <Link href="/services" legacyBehavior>
+              <Link href="/" legacyBehavior>
                 <a className="hover:text-gray-300">Locator</a>
               </Link>
             </li>
@@ -100,4 +101,3 @@ export default function Home() {
     </>
   );
 }
-5
