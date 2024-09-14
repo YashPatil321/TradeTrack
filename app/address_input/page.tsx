@@ -6,52 +6,75 @@ import { useRouter } from "next/navigation";
 export default function AddressInput() {
   const [truckName, setTruckName] = useState("");
   const [address, setAddress] = useState("");
+  const [schedule, setSchedule] = useState([{ startTime: "", endTime: "", address: "" }]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAddSlot = () => {
+    setSchedule([...schedule, { startTime: "", endTime: "", address: "" }]);
+  };
+
+  const handleChangeSlot = (index, field, value) => {
+    const updatedSchedule = schedule.map((slot, i) =>
+      i === index ? { ...slot, [field]: value } : slot
+    );
+    setSchedule(updatedSchedule);
+  };
+
+  const getLatLngFromAddress = async (address) => {
+    try {
+      const geocodingUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c`;
+      const response = await fetch(geocodingUrl);
+      const data = await response.json();
+
+      if (data.status !== "OK") {
+        throw new Error("Failed to fetch location data");
+      }
+
+      return data.results[0].geometry.location;
+    } catch (error) {
+      console.error("Error fetching location data:", error);
+      return null;
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!truckName || !address) {
-      alert("Please enter both a truck name and address.");
+    if (!truckName || !address || schedule.some(slot => !slot.startTime || !slot.endTime || !slot.address)) {
+      alert("Please fill in all fields.");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Geocode address to get lat/lng
-      const geocodingUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        address
-      )}&key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c`;
-
-      const response = await fetch(geocodingUrl);
-      const data = await response.json();
-
-      if (data.status !== "OK") {
-        alert("Failed to fetch location data. Please try again.");
+      const mainLocation = await getLatLngFromAddress(address);
+      if (!mainLocation) {
+        alert("Failed to fetch location data for main address. Please try again.");
         setLoading(false);
         return;
       }
 
-      const { lat, lng } = data.results[0].geometry.location;
-
-      // Create a new truck object
       const newTruck = {
         name: truckName,
-        lat,
-        lng,
+        cuisine: "American", // Placeholder for cuisine, can be expanded
+        schedule: await Promise.all(schedule.map(async (slot) => {
+          const location = await getLatLngFromAddress(slot.address);
+          return {
+            ...slot,
+            lat: location ? location.lat : mainLocation.lat,
+            lng: location ? location.lng : mainLocation.lng,
+          };
+        })),
       };
 
-      // Save new truck to localStorage
       const storedTrucks = localStorage.getItem("trucks");
       const trucks = storedTrucks ? JSON.parse(storedTrucks) : [];
       trucks.push(newTruck);
       localStorage.setItem("trucks", JSON.stringify(trucks));
 
       alert("Truck location added successfully!");
-
-      // Redirect to the map page
       router.push("/");
 
     } catch (error) {
@@ -63,7 +86,7 @@ export default function AddressInput() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#faf0e6" }}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-lg w-96">
         <h2 className="text-2xl font-bold mb-6 text-center text-blue-600">Add Truck Location</h2>
 
@@ -74,7 +97,7 @@ export default function AddressInput() {
             type="text"
             value={truckName}
             onChange={(e) => setTruckName(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
+            className="w-full p-3 border border-gray-300 rounded"
             placeholder="Enter truck name"
           />
         </div>
@@ -86,25 +109,50 @@ export default function AddressInput() {
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
+            className="w-full p-3 border border-gray-300 rounded"
             placeholder="Enter address"
           />
         </div>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-3 rounded hover:bg-blue-600 transition duration-300"
-          disabled={loading}
-        >
-          {loading ? "Adding..." : "Add Truck Location"}
-        </button>
+        <h3 className="text-lg font-semibold mb-2">Schedule:</h3>
+        {schedule.map((slot, index) => (
+          <div key={index} className="mb-4">
+            <input
+              type="time"
+              value={slot.startTime}
+              onChange={(e) => handleChangeSlot(index, "startTime", e.target.value)}
+              className="w-full p-2 mb-2 border border-gray-300 rounded"
+            />
+            <input
+              type="time"
+              value={slot.endTime}
+              onChange={(e) => handleChangeSlot(index, "endTime", e.target.value)}
+              className="w-full p-2 mb-2 border border-gray-300 rounded"
+            />
+            <input
+              type="text"
+              value={slot.address}
+              onChange={(e) => handleChangeSlot(index, "address", e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded"
+              placeholder="Enter schedule address"
+            />
+          </div>
+        ))}
 
         <button
           type="button"
-          onClick={() => router.push("/")}
-          className="w-full bg-green-500 text-white py-3 mt-4 rounded hover:bg-green-600 transition duration-300"
+          onClick={handleAddSlot}
+          className="w-full mb-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-700"
         >
-          See Map
+          Add Another Slot
+        </button>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full p-3 bg-green-500 text-white rounded hover:bg-green-700"
+        >
+          {loading ? "Adding..." : "Add Truck"}
         </button>
       </form>
     </div>
