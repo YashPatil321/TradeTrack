@@ -7,18 +7,6 @@ export default function Locator() {
   const [locations, setLocations] = useState([]);
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    cuisine: '',
-    vegetarian: false,
-    vegan: false,
-    kosher: false,
-    mealTimes: {
-      breakfast: false,
-      lunch: false,
-      dinner: false
-    },
-    searchQuery: ''
-  });
 
   // Fetch trucks from localStorage
   useEffect(() => {
@@ -66,7 +54,6 @@ export default function Locator() {
               content: infoWindowContent,
             });
 
-            // On hover: show a small image and current location
             marker.addListener('mouseover', () => {
               infoWindow.open(map, marker);
             });
@@ -75,7 +62,6 @@ export default function Locator() {
               infoWindow.close();
             });
 
-            // On click: open the modal with full details
             marker.addListener('click', () => {
               setSelectedTruck(truck);
               setIsModalOpen(true);
@@ -91,24 +77,34 @@ export default function Locator() {
     };
   }, [locations]);
 
+  // Search near me functionality
+  const searchNearMe = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const { latitude, longitude } = position.coords;
+        const map = new window.google.maps.Map(document.getElementById('map'), {
+          zoom: 12,
+          center: { lat: latitude, lng: longitude },
+        });
+
+        locations.forEach((truck) => {
+          truck.schedule.forEach((slot) => {
+            const marker = new window.google.maps.Marker({
+              position: { lat: slot.lat, lng: slot.lng },
+              map,
+              title: truck.name,
+            });
+          });
+        });
+      });
+    } else {
+      alert('Geolocation is not supported by this browser.');
+    }
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedTruck(null);
-  };
-
-  const handleFilterChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (type === 'checkbox') {
-      setFilters({
-        ...filters,
-        [name]: checked
-      });
-    } else {
-      setFilters({
-        ...filters,
-        [name]: value
-      });
-    }
   };
 
   return (
@@ -141,102 +137,56 @@ export default function Locator() {
         </div>
       </nav>
 
-      <div className="bg-white p-4 shadow-md fixed top-16 left-0 w-full z-40">
-        <div className="container mx-auto flex items-center justify-between">
+      <div className="bg-white p-4 shadow-md fixed top-16 left-0 w-full z-40 flex justify-center">
+        <div className="container mx-auto flex items-center justify-center bg-orange-100 rounded p-4">
           <div className="flex space-x-4">
             <div className="flex items-center space-x-2">
-              <label className="text-lg">Cuisine:</label>
-              <select
-                name="cuisine"
-                value={filters.cuisine}
-                onChange={handleFilterChange}
-                className="border rounded p-2"
-              >
-                <option value="">All</option>
-                <option value="Mexican">Mexican</option>
-                <option value="Italian">Italian</option>
-                <option value="Chinese">Chinese</option>
-                <option value="Indian">Indian</option>
-                {/* Add more options as needed */}
+              <label htmlFor="cuisine" className="text-gray-800">Cuisine:</label>
+              <select id="cuisine" className="bg-gray-100 text-gray-800 border border-gray-300 p-2 rounded">
+                <option value="">Select Cuisine</option>
+                <option value="mexican">Mexican</option>
+                <option value="asian">Asian</option>
+                <option value="italian">Italian</option>
               </select>
             </div>
 
             <div className="flex items-center space-x-2">
-              <label className="text-lg">Dietary Restrictions:</label>
-              <input
-                type="checkbox"
-                name="vegetarian"
-                checked={filters.vegetarian}
-                onChange={handleFilterChange}
-                className="mr-2"
-              />
-              <label className="mr-4">Vegetarian</label>
-
-              <input
-                type="checkbox"
-                name="vegan"
-                checked={filters.vegan}
-                onChange={handleFilterChange}
-                className="mr-2"
-              />
-              <label className="mr-4">Vegan</label>
-
-              <input
-                type="checkbox"
-                name="kosher"
-                checked={filters.kosher}
-                onChange={handleFilterChange}
-                className="mr-2"
-              />
-              <label>Kosher</label>
+              <label htmlFor="dietary-restrictions" className="text-gray-800">Dietary Restrictions:</label>
+              <select id="dietary-restrictions" className="bg-gray-100 text-gray-800 border border-gray-300 p-2 rounded">
+                <option value="">Select Restriction</option>
+                <option value="vegetarian">Vegetarian</option>
+                <option value="vegan">Vegan</option>
+                <option value="kosher">Kosher</option>
+              </select>
             </div>
 
             <div className="flex items-center space-x-2">
-              <label className="text-lg">Meal Times:</label>
-              <input
-                type="checkbox"
-                name="mealTimes.breakfast"
-                checked={filters.mealTimes.breakfast}
-                onChange={handleFilterChange}
-                className="mr-2"
-              />
-              <label className="mr-4">Breakfast</label>
-
-              <input
-                type="checkbox"
-                name="mealTimes.lunch"
-                checked={filters.mealTimes.lunch}
-                onChange={handleFilterChange}
-                className="mr-2"
-              />
-              <label className="mr-4">Lunch</label>
-
-              <input
-                type="checkbox"
-                name="mealTimes.dinner"
-                checked={filters.mealTimes.dinner}
-                onChange={handleFilterChange}
-                className="mr-2"
-              />
-              <label>Dinner</label>
+              <label htmlFor="meal-times" className="text-gray-800">Meal Times:</label>
+              <div className="flex space-x-2">
+                <label>
+                  <input type="checkbox" value="breakfast" className="mr-1" />
+                  <span className="text-black">Breakfast</span>
+                </label>
+                <label>
+                  <input type="checkbox" value="lunch" className="mr-1" />
+                  <span className="text-black">Lunch</span>
+                </label>
+                <label>
+                  <input type="checkbox" value="dinner" className="mr-1" />
+                  <span className="text-black">Dinner</span>
+                </label>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                name="searchQuery"
-                value={filters.searchQuery}
-                onChange={handleFilterChange}
-                placeholder="Search Near Me"
-                className="border rounded p-2"
-              />
-            </div>
+            <button onClick={searchNearMe} className="bg-blue-500 text-white p-2 rounded hover:bg-blue-700">
+              Search Near Me
+            </button>
           </div>
         </div>
       </div>
 
       <main className="flex min-h-screen flex-col items-center justify-between p-24" style={{ backgroundColor: '#f5d9bc' }}>
-        <div id="map" style={{ height: '800px', width: '100%' }}></div>
+        <div id="map" style={{ height: '800px', width: '75%' }}></div>
 
         {isModalOpen && selectedTruck && (
           <div
@@ -260,3 +210,8 @@ export default function Locator() {
               </button>
             </div>
           </div>
+        )}
+      </main>
+    </>
+  );
+}
