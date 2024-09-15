@@ -1,160 +1,253 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
 
 export default function AddressInput() {
-  const [truckName, setTruckName] = useState("");
-  const [address, setAddress] = useState("");
-  const [schedule, setSchedule] = useState([{ startTime: "", endTime: "", address: "" }]);
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [truckName, setTruckName] = useState('');
+  const [address, setAddress] = useState('');
+  const [truckImage, setTruckImage] = useState('');
+  const [description, setDescription] = useState('');
+  const [hours, setHours] = useState('');
+  const [currentLocation, setCurrentLocation] = useState('');
+  const [cuisine, setCuisine] = useState('');
+  const [vegetarian, setVegetarian] = useState(false);
+  const [vegan, setVegan] = useState(false);
+  const [kosher, setKosher] = useState(false);
+  const [mealTimes, setMealTimes] = useState({
+    breakfast: false,
+    lunch: false,
+    dinner: false
+  });
 
-  const handleAddSlot = () => {
-    setSchedule([...schedule, { startTime: "", endTime: "", address: "" }]);
-  };
-
-  const handleChangeSlot = (index, field, value) => {
-    const updatedSchedule = schedule.map((slot, i) =>
-      i === index ? { ...slot, [field]: value } : slot
-    );
-    setSchedule(updatedSchedule);
-  };
-
-  const getLatLngFromAddress = async (address) => {
-    try {
-      const geocodingUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c`;
-      const response = await fetch(geocodingUrl);
-      const data = await response.json();
-
-      if (data.status !== "OK") {
-        throw new Error("Failed to fetch location data");
-      }
-
-      return data.results[0].geometry.location;
-    } catch (error) {
-      console.error("Error fetching location data:", error);
-      return null;
-    }
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    
+    const truckData = {
+      name: truckName,
+      address,
+      image: truckImage,
+      description,
+      hours,
+      currentLocation,
+      cuisine,
+      dietaryRestrictions: {
+        vegetarian,
+        vegan,
+        kosher
+      },
+      mealTimes
+    };
 
-    if (!truckName || !address || schedule.some(slot => !slot.startTime || !slot.endTime || !slot.address)) {
-      alert("Please fill in all fields.");
-      return;
-    }
+    let trucks = JSON.parse(localStorage.getItem('trucks')) || [];
+    trucks.push(truckData);
+    localStorage.setItem('trucks', JSON.stringify(trucks));
 
-    setLoading(true);
+    // Clear form
+    setTruckName('');
+    setAddress('');
+    setTruckImage('');
+    setDescription('');
+    setHours('');
+    setCurrentLocation('');
+    setCuisine('');
+    setVegetarian(false);
+    setVegan(false);
+    setKosher(false);
+    setMealTimes({
+      breakfast: false,
+      lunch: false,
+      dinner: false
+    });
 
-    try {
-      const mainLocation = await getLatLngFromAddress(address);
-      if (!mainLocation) {
-        alert("Failed to fetch location data for main address. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      const newTruck = {
-        name: truckName,
-        cuisine: "American", // Placeholder for cuisine, can be expanded
-        schedule: await Promise.all(schedule.map(async (slot) => {
-          const location = await getLatLngFromAddress(slot.address);
-          return {
-            ...slot,
-            lat: location ? location.lat : mainLocation.lat,
-            lng: location ? location.lng : mainLocation.lng,
-          };
-        })),
-      };
-
-      const storedTrucks = localStorage.getItem("trucks");
-      const trucks = storedTrucks ? JSON.parse(storedTrucks) : [];
-      trucks.push(newTruck);
-      localStorage.setItem("trucks", JSON.stringify(trucks));
-
-      alert("Truck location added successfully!");
-      router.push("/");
-
-    } catch (error) {
-      alert("An error occurred while adding the truck.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    alert('Truck information added successfully!');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-lg w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center text-blue-600">Add Truck Location</h2>
-
-        <div className="mb-4">
-          <label htmlFor="truckName" className="block text-lg mb-2 text-gray-700">Truck Name</label>
-          <input
-            id="truckName"
-            type="text"
-            value={truckName}
-            onChange={(e) => setTruckName(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded"
-            placeholder="Enter truck name"
-          />
+    <>
+      <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="text-xl font-bold">TruckTrack</div>
+          <ul className="flex space-x-4">
+            <li>
+              <Link href="/" legacyBehavior>
+                <a className="hover:text-gray-300">Locator</a>
+              </Link>
+            </li>
+            <li>
+              <Link href="/about" legacyBehavior>
+                <a className="hover:text-gray-300">About</a>
+              </Link>
+            </li>
+            <li>
+              <Link href="/services" legacyBehavior>
+                <a className="hover:text-gray-300">Services</a>
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" legacyBehavior>
+                <a className="hover:text-gray-300">Contact</a>
+              </Link>
+            </li>
+          </ul>
         </div>
+      </nav>
 
-        <div className="mb-4">
-          <label htmlFor="address" className="block text-lg mb-2 text-gray-700">Address</label>
-          <input
-            id="address"
-            type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded"
-            placeholder="Enter address"
-          />
+      <div className="bg-white p-4 shadow-md fixed top-16 left-0 w-full z-40">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex space-x-4">
+            <div className="flex items-center space-x-2">
+              <label className="text-lg">Cuisine:</label>
+              <select
+                value={cuisine}
+                onChange={(e) => setCuisine(e.target.value)}
+                className="border rounded p-2"
+              >
+                <option value="">Select Cuisine</option>
+                <option value="Mexican">Mexican</option>
+                <option value="Italian">Italian</option>
+                <option value="Chinese">Chinese</option>
+                <option value="Indian">Indian</option>
+                {/* Add more options as needed */}
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <label className="text-lg">Dietary Restrictions:</label>
+              <input
+                type="checkbox"
+                checked={vegetarian}
+                onChange={(e) => setVegetarian(e.target.checked)}
+                className="mr-2"
+              />
+              <label className="mr-4">Vegetarian</label>
+
+              <input
+                type="checkbox"
+                checked={vegan}
+                onChange={(e) => setVegan(e.target.checked)}
+                className="mr-2"
+              />
+              <label className="mr-4">Vegan</label>
+
+              <input
+                type="checkbox"
+                checked={kosher}
+                onChange={(e) => setKosher(e.target.checked)}
+                className="mr-2"
+              />
+              <label>Kosher</label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <label className="text-lg">Meal Times:</label>
+              <input
+                type="checkbox"
+                checked={mealTimes.breakfast}
+                onChange={(e) => setMealTimes(prev => ({ ...prev, breakfast: e.target.checked }))}
+                className="mr-2"
+              />
+              <label className="mr-4">Breakfast</label>
+
+              <input
+                type="checkbox"
+                checked={mealTimes.lunch}
+                onChange={(e) => setMealTimes(prev => ({ ...prev, lunch: e.target.checked }))}
+                className="mr-2"
+              />
+              <label className="mr-4">Lunch</label>
+
+              <input
+                type="checkbox"
+                checked={mealTimes.dinner}
+                onChange={(e) => setMealTimes(prev => ({ ...prev, dinner: e.target.checked }))}
+                className="mr-2"
+              />
+              <label>Dinner</label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                placeholder="Search Near Me"
+                className="border rounded p-2"
+              />
+            </div>
+          </div>
         </div>
+      </div>
 
-        <h3 className="text-lg font-semibold mb-2">Schedule:</h3>
-        {schedule.map((slot, index) => (
-          <div key={index} className="mb-4">
-            <input
-              type="time"
-              value={slot.startTime}
-              onChange={(e) => handleChangeSlot(index, "startTime", e.target.value)}
-              className="w-full p-2 mb-2 border border-gray-300 rounded"
-            />
-            <input
-              type="time"
-              value={slot.endTime}
-              onChange={(e) => handleChangeSlot(index, "endTime", e.target.value)}
-              className="w-full p-2 mb-2 border border-gray-300 rounded"
-            />
+      <main className="flex min-h-screen flex-col items-center justify-between p-24" style={{ backgroundColor: '#f5d9bc' }}>
+        <form onSubmit={handleSubmit} className="max-w-lg mx-auto p-4 bg-white rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold mb-4">Add Truck Location</h2>
+          <div className="mb-4">
+            <label className="block text-gray-700">Truck Name:</label>
             <input
               type="text"
-              value={slot.address}
-              onChange={(e) => handleChangeSlot(index, "address", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              placeholder="Enter schedule address"
+              value={truckName}
+              onChange={(e) => setTruckName(e.target.value)}
+              className="border rounded p-2 w-full"
+              required
             />
           </div>
-        ))}
 
-        <button
-          type="button"
-          onClick={handleAddSlot}
-          className="w-full mb-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-        >
-          Add Another Slot
-        </button>
+          <div className="mb-4">
+            <label className="block text-gray-700">Address:</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="border rounded p-2 w-full"
+              required
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full p-3 bg-green-500 text-white rounded hover:bg-green-700"
-        >
-          {loading ? "Adding..." : "Add Truck"}
-        </button>
-      </form>
-    </div>
+          <div className="mb-4">
+            <label className="block text-gray-700">Truck Image URL:</label>
+            <input
+              type="text"
+              value={truckImage}
+              onChange={(e) => setTruckImage(e.target.value)}
+              className="border rounded p-2 w-full"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700">Description:</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="border rounded p-2 w-full"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700">Hours of Operation:</label>
+            <input
+              type="text"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              className="border rounded p-2 w-full"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700">Current Location:</label>
+            <input
+              type="text"
+              value={currentLocation}
+              onChange={(e) => setCurrentLocation(e.target.value)}
+              className="border rounded p-2 w-full"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+          >
+            Add Truck
+          </button>
+        </form>
+      </main>
+    </>
   );
 }

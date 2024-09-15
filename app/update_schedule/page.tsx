@@ -4,22 +4,33 @@ import { useState } from "react";
 
 export default function UpdateSchedule() {
   const [truckName, setTruckName] = useState("");
+  const [truckDescription, setTruckDescription] = useState("");
+  const [truckImage, setTruckImage] = useState("");
+  const [hoursOfOperation, setHoursOfOperation] = useState("");
+  const [currentLocation, setCurrentLocation] = useState("");
   const [schedule, setSchedule] = useState([]);
 
   const handleUpdateSchedule = () => {
     const storedTrucks = localStorage.getItem("trucks");
     let trucks = storedTrucks ? JSON.parse(storedTrucks) : [];
     
-    // Find truck and update its schedule
+    // Find truck and update its details and schedule
     const updatedTrucks = trucks.map(truck => {
       if (truck.name === truckName) {
-        return { ...truck, schedule };
+        return {
+          ...truck,
+          description: truckDescription,
+          image: truckImage,
+          hoursOfOperation: hoursOfOperation,
+          currentLocation: currentLocation,
+          schedule: schedule
+        };
       }
       return truck;
     });
 
     localStorage.setItem("trucks", JSON.stringify(updatedTrucks));
-    alert("Schedule updated successfully!");
+    alert("Truck details and schedule updated successfully!");
   };
 
   const handleAddSlot = () => {
@@ -36,7 +47,7 @@ export default function UpdateSchedule() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded shadow-lg w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center text-blue-600">Update Truck Schedule</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center text-blue-600">Update Truck Details and Schedule</h2>
 
         <div className="mb-4">
           <label htmlFor="truckName" className="block text-lg mb-2 text-gray-700">Truck Name</label>
@@ -47,6 +58,54 @@ export default function UpdateSchedule() {
             onChange={(e) => setTruckName(e.target.value)}
             className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
             placeholder="Enter truck name"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="truckDescription" className="block text-lg mb-2 text-gray-700">Description</label>
+          <input
+            id="truckDescription"
+            type="text"
+            value={truckDescription}
+            onChange={(e) => setTruckDescription(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Enter truck description"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="truckImage" className="block text-lg mb-2 text-gray-700">Image URL</label>
+          <input
+            id="truckImage"
+            type="text"
+            value={truckImage}
+            onChange={(e) => setTruckImage(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Enter truck image URL"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="hoursOfOperation" className="block text-lg mb-2 text-gray-700">Hours of Operation</label>
+          <input
+            id="hoursOfOperation"
+            type="text"
+            value={hoursOfOperation}
+            onChange={(e) => setHoursOfOperation(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Enter hours of operation"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="currentLocation" className="block text-lg mb-2 text-gray-700">Current Location</label>
+          <input
+            id="currentLocation"
+            type="text"
+            value={currentLocation}
+            onChange={(e) => setCurrentLocation(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Enter current location"
           />
         </div>
 
@@ -97,7 +156,7 @@ export default function UpdateSchedule() {
           onClick={handleUpdateSchedule}
           className="w-full bg-blue-500 text-white py-3 rounded hover:bg-blue-600 transition duration-300"
         >
-          Update Schedule
+          Update Truck Details and Schedule
         </button>
       </div>
     </div>

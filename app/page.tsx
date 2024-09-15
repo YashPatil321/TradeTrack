@@ -3,10 +3,22 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-export default function Home() {
+export default function Locator() {
   const [locations, setLocations] = useState([]);
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    cuisine: '',
+    vegetarian: false,
+    vegan: false,
+    kosher: false,
+    mealTimes: {
+      breakfast: false,
+      lunch: false,
+      dinner: false
+    },
+    searchQuery: ''
+  });
 
   // Fetch trucks from localStorage
   useEffect(() => {
@@ -43,11 +55,10 @@ export default function Home() {
             });
 
             const infoWindowContent = `
-              <div style="padding: 10px; max-width: 200px;">
+              <div style="padding: 10px; max-width: 200px; color: black;">
+                <img src="${truck.image}" alt="${truck.name}" style="width: 100px; height: auto;" />
                 <h3>${truck.name}</h3>
-                <p>Cuisine: ${truck.cuisine}</p>
-                <p>Hours: ${slot.startTime} - ${slot.endTime}</p>
-                <button style="color: blue; cursor: pointer;" id="view-more-${truck.id}">View More</button>
+                <p>Current Location: ${slot.address}</p>
               </div>
             `;
 
@@ -55,6 +66,7 @@ export default function Home() {
               content: infoWindowContent,
             });
 
+            // On hover: show a small image and current location
             marker.addListener('mouseover', () => {
               infoWindow.open(map, marker);
             });
@@ -63,6 +75,7 @@ export default function Home() {
               infoWindow.close();
             });
 
+            // On click: open the modal with full details
             marker.addListener('click', () => {
               setSelectedTruck(truck);
               setIsModalOpen(true);
@@ -81,6 +94,21 @@ export default function Home() {
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedTruck(null);
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      setFilters({
+        ...filters,
+        [name]: checked
+      });
+    } else {
+      setFilters({
+        ...filters,
+        [name]: value
+      });
+    }
   };
 
   return (
@@ -113,8 +141,102 @@ export default function Home() {
         </div>
       </nav>
 
+      <div className="bg-white p-4 shadow-md fixed top-16 left-0 w-full z-40">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex space-x-4">
+            <div className="flex items-center space-x-2">
+              <label className="text-lg">Cuisine:</label>
+              <select
+                name="cuisine"
+                value={filters.cuisine}
+                onChange={handleFilterChange}
+                className="border rounded p-2"
+              >
+                <option value="">All</option>
+                <option value="Mexican">Mexican</option>
+                <option value="Italian">Italian</option>
+                <option value="Chinese">Chinese</option>
+                <option value="Indian">Indian</option>
+                {/* Add more options as needed */}
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <label className="text-lg">Dietary Restrictions:</label>
+              <input
+                type="checkbox"
+                name="vegetarian"
+                checked={filters.vegetarian}
+                onChange={handleFilterChange}
+                className="mr-2"
+              />
+              <label className="mr-4">Vegetarian</label>
+
+              <input
+                type="checkbox"
+                name="vegan"
+                checked={filters.vegan}
+                onChange={handleFilterChange}
+                className="mr-2"
+              />
+              <label className="mr-4">Vegan</label>
+
+              <input
+                type="checkbox"
+                name="kosher"
+                checked={filters.kosher}
+                onChange={handleFilterChange}
+                className="mr-2"
+              />
+              <label>Kosher</label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <label className="text-lg">Meal Times:</label>
+              <input
+                type="checkbox"
+                name="mealTimes.breakfast"
+                checked={filters.mealTimes.breakfast}
+                onChange={handleFilterChange}
+                className="mr-2"
+              />
+              <label className="mr-4">Breakfast</label>
+
+              <input
+                type="checkbox"
+                name="mealTimes.lunch"
+                checked={filters.mealTimes.lunch}
+                onChange={handleFilterChange}
+                className="mr-2"
+              />
+              <label className="mr-4">Lunch</label>
+
+              <input
+                type="checkbox"
+                name="mealTimes.dinner"
+                checked={filters.mealTimes.dinner}
+                onChange={handleFilterChange}
+                className="mr-2"
+              />
+              <label>Dinner</label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                name="searchQuery"
+                value={filters.searchQuery}
+                onChange={handleFilterChange}
+                placeholder="Search Near Me"
+                className="border rounded p-2"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <main className="flex min-h-screen flex-col items-center justify-between p-24" style={{ backgroundColor: '#f5d9bc' }}>
-        <div id="map" style={{ height: '800px', width: '75%' }}></div>
+        <div id="map" style={{ height: '800px', width: '100%' }}></div>
 
         {isModalOpen && selectedTruck && (
           <div
@@ -122,16 +244,14 @@ export default function Home() {
             onClick={closeModal}
           >
             <div className="bg-white p-6 rounded-lg max-w-xl w-full" onClick={(e) => e.stopPropagation()}>
-              <h2 className="text-2xl font-bold mb-4">{selectedTruck.name}</h2>
-              <p>Cuisine: {selectedTruck.cuisine}</p>
-              <p>Schedule:</p>
-              <ul>
-                {selectedTruck.schedule.map((slot, index) => (
-                  <li key={index}>
-                    {slot.startTime} - {slot.endTime}
-                  </li>
-                ))}
-              </ul>
+              <h2 className="text-2xl font-bold mb-4 text-black">{selectedTruck.name}</h2>
+              <img
+                src={selectedTruck.image}
+                alt={selectedTruck.name}
+                className="w-full h-auto mb-4"
+              />
+              <p className="text-black"><strong>Description:</strong> {selectedTruck.description}</p>
+              <p className="text-black"><strong>Hours:</strong> {selectedTruck.hours}</p>
               <button
                 className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
                 onClick={closeModal}
@@ -140,8 +260,3 @@ export default function Home() {
               </button>
             </div>
           </div>
-        )}
-      </main>
-    </>
-  );
-}
