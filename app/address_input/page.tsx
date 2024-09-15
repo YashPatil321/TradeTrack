@@ -1,70 +1,212 @@
-"use client"; // This marks the file as a Client Component
+"use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function AddressInput() {
   const [address, setAddress] = useState('');
-  const [error, setError] = useState('');
+  const [truckName, setTruckName] = useState('');
+  const [truckImage, setTruckImage] = useState('');
+  const [description, setDescription] = useState('');
+  const [hours, setHours] = useState('');
+  const [currentLocation, setCurrentLocation] = useState('');
+  const [cuisine, setCuisine] = useState('');
+  const [restrictions, setRestrictions] = useState([]);
+  const [mealTimes, setMealTimes] = useState([]);
+  const [schedule, setSchedule] = useState([{ day: '', time: '', address: '' }]); // Changed to address
+
   const router = useRouter();
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAddress(e.target.value);
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const newTruck = {
+      address,
+      truckName,
+      truckImage,
+      description,
+      hours,
+      currentLocation,
+      cuisine,
+      restrictions,
+      mealTimes,
+      schedule, // Includes schedule in the saved truck
+    };
+    let trucks = JSON.parse(localStorage.getItem('trucks') || '[]');
+    trucks.push(newTruck);
+    localStorage.setItem('trucks', JSON.stringify(trucks));
+    router.push('/');
   };
 
-  const geocodeAddress = async (address: string) => {
-    const apiKey = 'AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c'; // Replace with your actual API key
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
-    );
-    const data = await response.json();
+  const addScheduleSlot = () => {
+    setSchedule([...schedule, { day: '', time: '', address: '' }]); // Changed to address
+  };
 
-    if (data.status === 'OK') {
-      const { lat, lng } = data.results[0].geometry.location;
-      return { lat, lng };
+  const updateSchedule = (index: number, field: string, value: string) => {
+    const updatedSchedule = schedule.map((slot, i) => i === index ? { ...slot, [field]: value } : slot);
+    setSchedule(updatedSchedule);
+  };
+
+  const handleRestrictionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value, checked } = e.target;
+    if (checked) {
+      setRestrictions([...restrictions, value]);
     } else {
-      setError('Address not found. Please try again.');
-      return null;
+      setRestrictions(restrictions.filter(restriction => restriction !== value));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    const coords = await geocodeAddress(address);
-    if (coords) {
-      // Save the new location in local storage
-      const savedLocations = JSON.parse(localStorage.getItem('truckLocations') || '[]');
-      const newLocation = { lat: coords.lat, lng: coords.lng, title: address };
-      localStorage.setItem('truckLocations', JSON.stringify([...savedLocations, newLocation]));
-
-      // Navigate back to the Home page with the new coordinates
-      router.replace('/');
+  const handleMealTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value, checked } = e.target;
+    if (checked) {
+      setMealTimes([...mealTimes, value]);
+    } else {
+      setMealTimes(mealTimes.filter(time => time !== value));
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#faedc8] p-8">
-      <h1 className="text-2xl font-bold mb-4 text-black">Add New Truck Location</h1>
-      <form onSubmit={handleSubmit} className="w-full max-w-sm">
-        <div className="mb-4">
+    <div className="min-h-screen bg-gray-100 p-8 flex flex-col items-center">
+      <h1 className="text-3xl font-bold mb-6 text-black">Add New Truck Location</h1>
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-md w-full max-w-2xl space-y-4">
+        
+        <div>
+          <label className="block text-black mb-2">Truck Name</label>
           <input
             type="text"
-            className="w-full p-2 border border-gray-300 rounded"
-            value={address}
-            onChange={handleAddressChange}
-            placeholder="Enter address"
+            value={truckName}
+            onChange={(e) => setTruckName(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
             required
-            style={{ color: 'black', backgroundColor: '#fff' }} // Set input text color to black
           />
         </div>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-700"
-        >
-          Add Location
+
+        <div>
+          <label className="block text-black mb-2">Address</label>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-black mb-2">Truck Image URL</label>
+          <input
+            type="text"
+            value={truckImage}
+            onChange={(e) => setTruckImage(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
+          />
+        </div>
+
+        <div>
+          <label className="block text-black mb-2">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
+            rows="3"
+          />
+        </div>
+
+        <div>
+          <label className="block text-black mb-2">Hours of Operation</label>
+          <input
+            type="text"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
+          />
+        </div>
+
+        <div>
+          <label className="block text-black mb-2">Cuisine Type</label>
+          <select
+            value={cuisine}
+            onChange={(e) => setCuisine(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
+          >
+            <option value="" disabled>Select Cuisine</option>
+            <option value="Mexican">Mexican</option>
+            <option value="Italian">Italian</option>
+            <option value="American">American</option>
+            <option value="Asian">Asian</option>
+            {/* Add more cuisine options as needed */}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-black mb-2">Dietary Restrictions</label>
+          <div className="flex space-x-4">
+            <label className="text-black">
+              <input type="checkbox" value="Vegetarian" onChange={handleRestrictionChange} /> Vegetarian
+            </label>
+            <label className="text-black">
+              <input type="checkbox" value="Vegan" onChange={handleRestrictionChange} /> Vegan
+            </label>
+            <label className="text-black">
+              <input type="checkbox" value="Kosher" onChange={handleRestrictionChange} /> Kosher
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-black mb-2">Meal Times</label>
+          <div className="flex space-x-4">
+            <label className="text-black">
+              <input type="checkbox" value="Breakfast" onChange={handleMealTimeChange} /> Breakfast
+            </label>
+            <label className="text-black">
+              <input type="checkbox" value="Lunch" onChange={handleMealTimeChange} /> Lunch
+            </label>
+            <label className="text-black">
+              <input type="checkbox" value="Dinner" onChange={handleMealTimeChange} /> Dinner
+            </label>
+          </div>
+        </div>
+
+        <h2 className="text-2xl font-bold text-black">Schedule</h2>
+        {schedule.map((slot, index) => (
+          <div key={index} className="border border-gray-300 p-4 mb-4 rounded">
+            <div className="mb-2">
+              <label className="block text-black">Day</label>
+              <input
+                type="text"
+                value={slot.day}
+                onChange={(e) => updateSchedule(index, 'day', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
+                placeholder="E.g. Monday"
+              />
+            </div>
+            <div className="mb-2">
+              <label className="block text-black">Time</label>
+              <input
+                type="text"
+                value={slot.time}
+                onChange={(e) => updateSchedule(index, 'time', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
+                placeholder="E.g. 10:00 AM - 2:00 PM"
+              />
+            </div>
+            <div className="mb-2">
+              <label className="block text-black">Address</label> {/* Replaced lat/lng with address */}
+              <input
+                type="text"
+                value={slot.address}
+                onChange={(e) => updateSchedule(index, 'address', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
+              />
+            </div>
+          </div>
+        ))}
+        <button type="button" onClick={addScheduleSlot} className="bg-blue-500 text-white p-2 rounded w-full">
+          Add Another Schedule Slot
+        </button>
+
+        <button type="submit" className="mt-4 bg-green-500 text-white p-2 rounded w-full">
+          Submit
         </button>
       </form>
     </div>
