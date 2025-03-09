@@ -20,6 +20,10 @@ interface Truck {
   description: string;
   image: string;
   hours: string;
+  cuisine: string;
+  restrictions?: string[];
+  mealTimes?: string[];
+  mainLocation: string;
   schedule: { address: string; lat: number; lng: number }[];
 }
 export default function Locator() {
@@ -295,33 +299,99 @@ useEffect(() => {
         </div>
       </div>
       
-      <main className="flex min-h-screen flex-col items-center justify-between p-0" style={{ backgroundColor: '#f5d9bc' }}>
-        <div id="map" style={{ height: '1200px', width: '120%' }}></div>
+      <main
+  className="flex min-h-screen flex-col items-center justify-between p-0"
+  style={{ backgroundColor: '#f5d9bc' }}
+>
+  <div id="map" style={{ height: '1200px', width: '120%' }}></div>
 
-        {isModalOpen && selectedTruck && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-            onClick={closeModal}
-          >
-            <div className="bg-white p-6 rounded-lg max-w-xl w-full" onClick={(e) => e.stopPropagation()}>
-              {selectedTruck && <h2 className="text-2xl font-bold mb-4 text-black">{selectedTruck.name}</h2>}
-              <img
-                src={selectedTruck.image}
-                alt={selectedTruck.name}
-                className="w-full h-auto mb-4"
-              />
-              <p className="text-black"><strong>Description:</strong> {selectedTruck.description}</p>
-              <p className="text-black"><strong>Hours:</strong> {selectedTruck.hours}</p>
-              <button
-                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-                onClick={closeModal}
-              >
-                Close
-              </button>
-            </div>
-          </div>
+  {isModalOpen && selectedTruck && (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={closeModal}
+    >
+      <div
+        className="bg-white p-6 rounded-lg max-w-xl w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Truck Name */}
+        <h2 className="text-2xl font-bold mb-4 text-black">
+          {selectedTruck.name}
+        </h2>
+
+        {/* Truck Image (only if provided) */}
+        {selectedTruck.image && (
+          <img
+            src={selectedTruck.image}
+            alt={selectedTruck.name}
+            className="w-full h-auto mb-4"
+          />
         )}
-      </main>
+
+        {/* Basic Details */}
+        <p className="text-black mb-2">
+          <strong>Description:</strong> {selectedTruck.description}
+        </p>
+        <p className="text-black mb-2">
+          <strong>Hours:</strong> {selectedTruck.hours}
+        </p>
+        <p className="text-black mb-2">
+          <strong>Cuisine:</strong> {selectedTruck.cuisine}
+        </p>
+        <p className="text-black mb-2">
+          <strong>Dietary Restrictions:</strong>{" "}
+          {selectedTruck.restrictions && selectedTruck.restrictions.length > 0
+            ? selectedTruck.restrictions.join(", ")
+            : "None"}
+        </p>
+        <p className="text-black mb-2">
+          <strong>Meal Times:</strong>{" "}
+          {selectedTruck.mealTimes && selectedTruck.mealTimes.length > 0
+            ? selectedTruck.mealTimes.join(", ")
+            : "Not specified"}
+        </p>
+
+        {/* Location Section */}
+        <div className="flex flex-col md:flex-row md:space-x-4 mb-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-black">Main Location</h3>
+            <p className="text-black">
+              {selectedTruck.mainLocation
+                ? selectedTruck.mainLocation
+                : (selectedTruck.schedule && selectedTruck.schedule[0]?.address) || "Not specified"}
+            </p>
+          </div>
+          {/* Removed Home Location section as it does not exist in Truck interface */}
+        </div>
+
+        {/* Weekly Schedule Section */}
+        <div className="mt-4">
+          <h3 className="text-xl font-bold text-black mb-2">
+            Weekly Schedule for {selectedTruck.name} for this week
+          </h3>
+          <ul className="space-y-2">
+            {selectedTruck.schedule && selectedTruck.schedule.map((slot: any, index: number) => (
+              <li key={index} className="text-black border-b pb-2">
+                <p><strong>Day:</strong> {slot.day}</p>
+                <p><strong>Time:</strong> {slot.time}</p>
+                <p><strong>Address:</strong> {slot.address}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Close Button */}
+        <button
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+          onClick={closeModal}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )}
+</main>
+
     </>
   );
 }

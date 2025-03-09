@@ -131,18 +131,16 @@ export default function TruckInput() {
       cuisine,
       restrictions,
       mealTimes,
-      schedule: finalSchedule,
+      mainLocation: address, // <- Use the top-level address state here
+      schedule: scheduleWithCoords,
     };
   
+    // Save to localStorage or your DB
     let trucks = JSON.parse(localStorage.getItem("trucks") || "[]");
     trucks.push(newTruck);
     localStorage.setItem("trucks", JSON.stringify(trucks));
   
-    setConfirmationMessage("Truck created successfully!");
-    console.log("✅ Truck successfully added!", newTruck);
-  
-    router.refresh();
-    router.push("/");
+    // Confirmation, etc.
   };
   
   

@@ -21,8 +21,8 @@ export default function ListYourService() {
               </Link>
             </li>
             <li>
-              <Link href="/list_your_service" legacyBehavior>
-                <a className="hover:text-gray-300">List Your Service</a>
+              <Link href="/contact" legacyBehavior>
+                <a className="hover:text-gray-300">Contact</a>
               </Link>
             </li>
           </ul>
