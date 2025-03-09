@@ -162,6 +162,20 @@ const handleSubmit = async (event: React.FormEvent) => {
         </div>
 
         <div>
+        <label className="block text-black mb-2">Truck Image</label>
+  <input 
+    type="file" 
+    accept="image/*" 
+    onChange={handleFileChange} 
+    className="w-full p-2 border border-gray-300 rounded text-black"
+    required
+  />
+  {truckImage && (
+    <div className="mt-4">
+      <p className="text-black">Preview:</p>
+      <img src={truckImage} alt="Truck Preview" className="w-48 h-auto border" />
+    </div>
+  )}
           <label className="block text-black mb-2">Truck Image URL</label>
           <input
             type="text"
