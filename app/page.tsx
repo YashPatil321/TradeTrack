@@ -18,59 +18,53 @@ export default function Locator() {
 
   // Initialize Google Maps
   useEffect(() => {
+    window.initMap = function () {
+        const mapElement = document.getElementById("map") as HTMLElement | null;
+        if (!mapElement) return;
+    
+        const map = new window.google.maps.Map(mapElement, {
+          zoom: 4,
+          center: { lat: 39.8283, lng: -98.5795 },
+        });
+    
+        locations.forEach((truck) => {
+          if (Array.isArray(truck.schedule)) {
+            truck.schedule.forEach((slot) => {
+              const marker = new window.google.maps.Marker({
+                position: { lat: slot.lat, lng: slot.lng },
+                map,
+                title: truck.name,
+                icon: {
+                  url: "food-truck.png",
+                  scaledSize: new window.google.maps.Size(50, 50),
+                },
+              });
+    
+              const infoWindow = new window.google.maps.InfoWindow({
+                content: `
+                  <div style="padding: 10px; max-width: 200px; color: black;">
+                    <img src="${truck.image}" alt="${truck.name}" style="width: 100px; height: auto;" />
+                    <h3>${truck.name}</h3>
+                    <p>Current Location: ${slot.address}</p>
+                  </div>
+                `,
+              });
+    
+              marker.addListener("mouseover", () => infoWindow.open(map, marker));
+              marker.addListener("mouseout", () => infoWindow.close());
+              marker.addListener("click", () => {
+                setSelectedTruck(truck);
+                setIsModalOpen(true);
+              });
+            });
+          }
+        });
+      };
+    
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyA-TlVuQXWUgjmMxpLS4qmWjv164jkl75c&callback=initMap&v=weekly`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`;
     script.async = true;
     script.defer = true;
-
-    window.initMap = function () {
-      const map = new window.google.maps.Map(document.getElementById('map'), {
-        zoom: 4,
-        center: { lat: 39.8283, lng: -98.5795 },
-      });
-
-      locations.forEach((truck) => {
-        if (Array.isArray(truck.schedule)) {
-          truck.schedule.forEach((slot) => {
-            const marker = new window.google.maps.Marker({
-              position: { lat: slot.lat, lng: slot.lng },
-              map,
-              title: truck.name,
-              icon: {
-                url: 'food-truck.png',
-                scaledSize: new window.google.maps.Size(50, 50),
-              },
-            });
-
-            const infoWindowContent = `
-              <div style="padding: 10px; max-width: 200px; color: black;">
-                <img src="${truck.image}" alt="${truck.name}" style="width: 100px; height: auto;" />
-                <h3>${truck.name}</h3>
-                <p>Current Location: ${slot.address}</p>
-              </div>
-            `;
-
-            const infoWindow = new window.google.maps.InfoWindow({
-              content: infoWindowContent,
-            });
-
-            marker.addListener('mouseover', () => {
-              infoWindow.open(map, marker);
-            });
-
-            marker.addListener('mouseout', () => {
-              infoWindow.close();
-            });
-
-            marker.addListener('click', () => {
-              setSelectedTruck(truck);
-              setIsModalOpen(true);
-            });
-          });
-        }
-      });
-    };
-
     document.head.appendChild(script);
     return () => {
       document.head.removeChild(script);

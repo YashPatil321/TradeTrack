@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function AddressInput() {
@@ -11,31 +11,101 @@ export default function AddressInput() {
   const [hours, setHours] = useState('');
   const [currentLocation, setCurrentLocation] = useState('');
   const [cuisine, setCuisine] = useState('');
-  const [restrictions, setRestrictions] = useState([]);
-  const [mealTimes, setMealTimes] = useState([]);
+  const [restrictions, setRestrictions] = useState<string[]>([]);
+  const [mealTimes, setMealTimes] = useState<string[]>([]);
   const [schedule, setSchedule] = useState([{ day: '', time: '', address: '' }]); // Changed to address
 
   const router = useRouter();
+  const getLatLngFromAddress = async (address: string) => {
+    const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key='AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs'}`
+    );
+    const data = await response.json();
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const newTruck = {
-      address,
-      truckName,
-      truckImage,
+    if (data.status === "OK") {
+        return data.results[0].geometry.location;
+    } else {
+        console.error("Geocoding Error:", data.status, data.error_message);
+        return { lat: 0, lng: 0 }; // 🚨 Default to 0,0 if geocoding fails
+    }
+};
+
+const handleSubmit = async (event: React.FormEvent) => {
+  event.preventDefault();
+
+  // ✅ Function to get lat/lng for an address
+  const geocodeAddress = async (address: string) => {
+      
+
+      console.log("🌍 Geocoding address:", address); // ✅ Log the exact address being sent
+
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`;
+
+      try {
+          const response = await fetch(url);
+          const data = await response.json();
+
+          console.log("🔍 Geocoding Response:", data); // ✅ Log the full API response
+
+          if (data.status === "OK") {
+              return {
+                  lat: data.results[0].geometry.location.lat,
+                  lng: data.results[0].geometry.location.lng,
+              };
+          } else {
+              console.error("❌ Geocoding Error:", data.status, data.error_message);
+              return { lat: null, lng: null };
+          }
+      } catch (error) {
+          console.error("⚠️ Fetch Error:", error);
+          return { lat: null, lng: null };
+      }
+  };
+
+  // ✅ Convert schedule addresses to lat/lng
+  const scheduleWithCoords = await Promise.all(
+      schedule.map(async (slot) => {
+          if (!slot.address || slot.address.trim() === "") {
+              console.warn("⚠️ Skipping empty address");
+              return { ...slot, lat: null, lng: null };
+          }
+
+          const coords = await geocodeAddress(slot.address);
+
+          // 🚨 Ensure lat/lng are only saved if valid
+          return { 
+              ...slot, 
+              lat: coords.lat !== null ? coords.lat : null, 
+              lng: coords.lng !== null ? coords.lng : null 
+          };
+      })
+  );
+
+  // ✅ Log the final data to verify lat/lng before saving
+  console.log("🗺️ Final Schedule Data with Lat/Lng:", scheduleWithCoords);
+
+  const newTruck = {
+      name: truckName,
+      image: truckImage,
       description,
       hours,
-      currentLocation,
       cuisine,
       restrictions,
       mealTimes,
-      schedule, // Includes schedule in the saved truck
-    };
-    let trucks = JSON.parse(localStorage.getItem('trucks') || '[]');
-    trucks.push(newTruck);
-    localStorage.setItem('trucks', JSON.stringify(trucks));
-    router.push('/');
+      schedule: scheduleWithCoords,
   };
+
+  let trucks = JSON.parse(localStorage.getItem("trucks") || "[]");
+  trucks.push(newTruck);
+  localStorage.setItem("trucks", JSON.stringify(trucks));
+
+  console.log("✅ Truck successfully added!", newTruck);
+
+  router.refresh();
+  router.push("/");
+};
+
+
 
   const addScheduleSlot = () => {
     setSchedule([...schedule, { day: '', time: '', address: '' }]); // Changed to address
@@ -107,7 +177,7 @@ export default function AddressInput() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded text-black" // Made text black
-            rows="3"
+            rows={3}
           />
         </div>
 
