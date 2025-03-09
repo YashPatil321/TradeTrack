@@ -1,101 +1,190 @@
 "use client";
 
+declare global {
+  interface Window {
+    initMap: () => void;
+  }
+}
+/// <reference types="@types/google.maps" />
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+interface TruckSchedule {
+  lat: number;
+  lng: number;
+  address: string;
+}
+interface Truck {
+  name: string;
+  description: string;
+  image: string;
+  hours: string;
+  schedule: { address: string; lat: number; lng: number }[];
+}
 export default function Locator() {
-  const [locations, setLocations] = useState([]);
-  const [selectedTruck, setSelectedTruck] = useState(null);
+  const [locations, setLocations] = useState<Truck[]>([]);
+  const [selectedTruck, setSelectedTruck] = useState<Truck | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch trucks from localStorage
   useEffect(() => {
-    const storedTrucks = localStorage.getItem('trucks');
+    const storedTrucks = localStorage.getItem("trucks");
     if (storedTrucks) {
       setLocations(JSON.parse(storedTrucks));
     }
-  }, []);
+  }, []); // ✅ No dependency, so it runs only once when page loads
+  
 
   // Initialize Google Maps
-  useEffect(() => {
-    window.initMap = function () {
-        const mapElement = document.getElementById("map") as HTMLElement | null;
-        if (!mapElement) return;
-    
-        const map = new window.google.maps.Map(mapElement, {
-          zoom: 4,
-          center: { lat: 39.8283, lng: -98.5795 },
-        });
-    
-        locations.forEach((truck) => {
-          if (Array.isArray(truck.schedule)) {
-            truck.schedule.forEach((slot) => {
-              const marker = new window.google.maps.Marker({
-                position: { lat: slot.lat, lng: slot.lng },
-                map,
-                title: truck.name,
-                icon: {
-                  url: "food-truck.png",
-                  scaledSize: new window.google.maps.Size(50, 50),
-                },
-              });
-    
-              const infoWindow = new window.google.maps.InfoWindow({
-                content: `
-                  <div style="padding: 10px; max-width: 200px; color: black;">
-                    <img src="${truck.image}" alt="${truck.name}" style="width: 100px; height: auto;" />
-                    <h3>${truck.name}</h3>
-                    <p>Current Location: ${slot.address}</p>
-                  </div>
-                `,
-              });
-    
-              marker.addListener("mouseover", () => infoWindow.open(map, marker));
-              marker.addListener("mouseout", () => infoWindow.close());
-              marker.addListener("click", () => {
-                setSelectedTruck(truck);
-                setIsModalOpen(true);
-              });
-            });
-          }
-        });
-      };
-    
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-    return () => {
-      document.head.removeChild(script);
-    };
-  }, [locations]);
+  // Initialize Google Maps
+useEffect(() => {
+  if (!locations || locations.length === 0) return; // Only run if there are trucks
 
-  // Search near me functionality
-  const searchNearMe = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords;
-        const map = new window.google.maps.Map(document.getElementById('map'), {
-          zoom: 12,
-          center: { lat: latitude, lng: longitude },
-        });
+  // Define initMap so that Google Maps can call it after the script loads
+  window.initMap = function () {
+    const mapElement = document.getElementById("map") as HTMLElement | null;
+    if (!mapElement) return;
 
-        locations.forEach((truck) => {
-          truck.schedule.forEach((slot) => {
+    // Initialize the map
+    const map = new window.google.maps.Map(mapElement, {
+      zoom: 4,
+      center: { lat: 39.8283, lng: -98.5795 },
+    });
+
+    // Loop through each truck and add markers
+    locations.forEach((truck) => {
+      if (Array.isArray(truck.schedule)) {
+        truck.schedule.forEach((slot) => {
+          // Only add marker if slot.lat and slot.lng are valid numbers
+          if (typeof slot.lat === "number" && typeof slot.lng === "number") {
             const marker = new window.google.maps.Marker({
               position: { lat: slot.lat, lng: slot.lng },
               map,
               title: truck.name,
+              icon: {
+                url: "food-truck.png", // Ensure this image is in your public folder
+                scaledSize: new window.google.maps.Size(50, 50),
+              },
             });
-          });
+
+            // Create an info window for marker
+            const infoWindow = new window.google.maps.InfoWindow({
+              content: `
+                <div style="padding: 10px; max-width: 200px; color: black;">
+                  <img src="${truck.image}" alt="${truck.name}" style="width: 100px; height: auto;" />
+                  <h3>${truck.name}</h3>
+                  <p>Current Location: ${slot.address}</p>
+                </div>
+              `,
+            });
+
+            // Open info window on mouseover and close on mouseout
+            marker.addListener("mouseover", () => infoWindow.open(map, marker));
+            marker.addListener("mouseout", () => infoWindow.close());
+
+            // Show modal on marker click
+            marker.addListener("click", () => {
+              setSelectedTruck(truck);
+              setIsModalOpen(true);
+            });
+          } else {
+            console.warn(`Skipping invalid marker for truck "${truck.name}"`, slot);
+          }
         });
-      });
-    } else {
-      alert('Geolocation is not supported by this browser.');
-    }
+      }
+    });
   };
 
+  // Create and load the Google Maps script with callback
+  const script = document.createElement("script");
+  script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs&callback=initMap`;
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+
+  // Clean up the script when the component unmounts
+  return () => {
+    document.head.removeChild(script);
+  };
+}, [locations]);
+
+
+  // Search near me functionality
+  const searchNearMe = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const mapElement = document.getElementById("map") as HTMLElement | null;
+          if (!mapElement) return;
+  
+          // Create a new map centered at the user's location
+          const map = new window.google.maps.Map(mapElement, {
+            zoom: 12,
+            center: { lat: latitude, lng: longitude },
+          });
+  
+          // Loop through each truck and add markers
+          locations.forEach((truck) => {
+            if (Array.isArray(truck.schedule)) {
+              truck.schedule.forEach((slot) => {
+                // Only add marker if lat/lng are valid numbers
+                if (
+                  typeof slot.lat === "number" &&
+                  typeof slot.lng === "number" &&
+                  !isNaN(slot.lat) &&
+                  !isNaN(slot.lng) &&
+                  slot.lat !== 0 &&
+                  slot.lng !== 0 &&
+                  slot.lat !== null &&
+                  slot.lng !== null
+                ) {
+                  const marker = new window.google.maps.Marker({
+                    position: { lat: slot.lat, lng: slot.lng },
+                    map,
+                    title: truck.name,
+                    icon: {
+                      url: "food-truck.png", // Ensure this image exists in your public folder
+                      scaledSize: new window.google.maps.Size(50, 50),
+                    },
+                  });
+  
+                  const infoWindow = new window.google.maps.InfoWindow({
+                    content: `
+                      <div style="padding: 10px; max-width: 200px; color: black;">
+                        <img src="${truck.image}" alt="${truck.name}" style="width: 100px; height: auto;" />
+                        <h3>${truck.name}</h3>
+                        <p>Current Location: ${slot.address}</p>
+                      </div>
+                    `,
+                  });
+  
+                  marker.addListener("mouseover", () => infoWindow.open(map, marker));
+                  marker.addListener("mouseout", () => infoWindow.close());
+                  marker.addListener("click", () => {
+                    setSelectedTruck(truck);
+                    setIsModalOpen(true);
+                  });
+                } else {
+                  console.warn(`Skipping invalid marker for truck: ${truck.name}`, slot);
+                }
+              });
+            }
+          });
+        },
+        (error) => {
+          console.error("Error getting geolocation:", error);
+          alert("Error getting your location.");
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by this browser.");
+    }
+  };
+  
+
+  // Function to close the modal
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedTruck(null);
@@ -180,7 +269,7 @@ export default function Locator() {
       </div>
 
       <main className="flex min-h-screen flex-col items-center justify-between p-24" style={{ backgroundColor: '#f5d9bc' }}>
-        <div id="map" style={{ height: '800px', width: '75%' }}></div>
+        <div id="map" style={{ height: '1000px', width: '120%' }}></div>
 
         {isModalOpen && selectedTruck && (
           <div
@@ -188,7 +277,7 @@ export default function Locator() {
             onClick={closeModal}
           >
             <div className="bg-white p-6 rounded-lg max-w-xl w-full" onClick={(e) => e.stopPropagation()}>
-              <h2 className="text-2xl font-bold mb-4 text-black">{selectedTruck.name}</h2>
+              {selectedTruck && <h2 className="text-2xl font-bold mb-4 text-black">{selectedTruck.name}</h2>}
               <img
                 src={selectedTruck.image}
                 alt={selectedTruck.name}
