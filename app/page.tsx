@@ -26,6 +26,8 @@ export default function Locator() {
   const [locations, setLocations] = useState<Truck[]>([]);
   const [selectedTruck, setSelectedTruck] = useState<Truck | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTrade, setSelectedTrade] = useState("");
+
 
   // Fetch trucks from localStorage
   useEffect(() => {
@@ -194,7 +196,7 @@ useEffect(() => {
     <>
       <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
         <div className="container mx-auto flex items-center justify-between">
-          <div className="text-xl font-bold">TruckTrack</div>
+          <div className="text-xl font-bold">TradeTrack</div>
           <ul className="flex space-x-4">
             <li>
               <Link href="/" legacyBehavior>
@@ -207,69 +209,94 @@ useEffect(() => {
               </Link>
             </li>
             <li>
-              <Link href="/services" legacyBehavior>
-                <a className="hover:text-gray-300">Services</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact" legacyBehavior>
-                <a className="hover:text-gray-300">Contact</a>
+              <Link href="/list_your_service" legacyBehavior>
+                <a className="hover:text-gray-300">List Your Trade</a>
               </Link>
             </li>
           </ul>
         </div>
       </nav>
-
-      <div className="bg-white p-4 shadow-md fixed top-16 left-0 w-full z-40 flex justify-center">
-        <div className="container mx-auto flex items-center justify-center bg-orange-100 rounded p-4">
-          <div className="flex space-x-4">
-            <div className="flex items-center space-x-2">
-              <label htmlFor="cuisine" className="text-gray-800">Cuisine:</label>
-              <select id="cuisine" className="bg-gray-100 text-gray-800 border border-gray-300 p-2 rounded">
-                <option value="">Select Cuisine</option>
-                <option value="mexican">Mexican</option>
-                <option value="asian">Asian</option>
-                <option value="italian">Italian</option>
-              </select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <label htmlFor="dietary-restrictions" className="text-gray-800">Dietary Restrictions:</label>
-              <select id="dietary-restrictions" className="bg-gray-100 text-gray-800 border border-gray-300 p-2 rounded">
-                <option value="">Select Restriction</option>
-                <option value="vegetarian">Vegetarian</option>
-                <option value="vegan">Vegan</option>
-                <option value="kosher">Kosher</option>
-              </select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <label htmlFor="meal-times" className="text-gray-800">Meal Times:</label>
-              <div className="flex space-x-2">
-                <label>
-                  <input type="checkbox" value="breakfast" className="mr-1" />
-                  <span className="text-black">Breakfast</span>
-                </label>
-                <label>
-                  <input type="checkbox" value="lunch" className="mr-1" />
-                  <span className="text-black">Lunch</span>
-                </label>
-                <label>
-                  <input type="checkbox" value="dinner" className="mr-1" />
-                  <span className="text-black">Dinner</span>
-                </label>
-              </div>
-            </div>
-
-            <button onClick={searchNearMe} className="bg-blue-500 text-white p-2 rounded hover:bg-blue-700">
-              Search Near Me
+      <div
+        className="p-3 w-full mt-16" // changed from mt-16 to mt-12
+        style={{ backgroundColor: "#f5d9bc" }}
+        >
+        <div className="container mx-auto flex flex-wrap items-center justify-between">
+          {/* Hardcoded Trade Buttons */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedTrade("")}
+              className={`px-4 py-2 rounded text-sm ${
+                selectedTrade === ""
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
+              }`}
+            >
+              All Trades
+            </button>
+            <button
+              onClick={() => setSelectedTrade("food_truck")}
+              className={`px-4 py-2 rounded text-sm ${
+                selectedTrade === "food_truck"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
+              }`}
+            >
+              Food Truck
+            </button>
+            <button
+              onClick={() => setSelectedTrade("plumber")}
+              className={`px-4 py-2 rounded text-sm ${
+                selectedTrade === "plumber"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
+              }`}
+            >
+              Plumber
+            </button>
+            <button
+              onClick={() => setSelectedTrade("electrician")}
+              className={`px-4 py-2 rounded text-sm ${
+                selectedTrade === "electrician"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
+              }`}
+            >
+              Electrician
+            </button>
+            <button
+              onClick={() => setSelectedTrade("cleaner")}
+              className={`px-4 py-2 rounded text-sm ${
+                selectedTrade === "cleaner"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
+              }`}
+            >
+              Cleaner
+            </button>
+            <button
+              onClick={() => setSelectedTrade("carpenter")}
+              className={`px-4 py-2 rounded text-sm ${
+                selectedTrade === "carpenter"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
+              }`}
+            >
+              Carpenter
             </button>
           </div>
+
+          {/* Search Near Me Button */}
+          <button
+            onClick={searchNearMe}
+            className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600"
+          >
+            Search Near Me
+          </button>
         </div>
       </div>
-
-      <main className="flex min-h-screen flex-col items-center justify-between p-24" style={{ backgroundColor: '#f5d9bc' }}>
-        <div id="map" style={{ height: '1000px', width: '120%' }}></div>
+      
+      <main className="flex min-h-screen flex-col items-center justify-between p-0" style={{ backgroundColor: '#f5d9bc' }}>
+        <div id="map" style={{ height: '1200px', width: '120%' }}></div>
 
         {isModalOpen && selectedTruck && (
           <div
