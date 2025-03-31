@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function TruckInput() {
   const [address, setAddress] = useState("");
@@ -17,40 +18,40 @@ export default function TruckInput() {
 
   const router = useRouter();
 
-  // Function to get lat/lng for an address
+  // Function to get lat/lng for an address (using Google Geocoding API)
   const getLatLngFromAddress = async (address: string) => {
     const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key='AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs'}`
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        address
+      )}&key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`
     );
     const data = await response.json();
-
     if (data.status === "OK") {
-        return data.results[0].geometry.location;
+      return data.results[0].geometry.location;
     } else {
-        console.error("Geocoding Error:", data.status, data.error_message);
-        return { lat: 0, lng: 0 }; // 🚨 Default to 0,0 if geocoding fails
+      console.error("Geocoding Error:", data.status, data.error_message);
+      return { lat: 0, lng: 0 };
     }
-};
+  };
+
+  // Handler for file input change – creates a preview URL
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Create a URL for previewing the image
       const imageUrl = URL.createObjectURL(file);
       setTruckImage(imageUrl);
     }
   };
-  
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-  
-    // Function to get lat/lng for an address
+
+    // Geocode the main address (top-level field)
     const geocodeAddress = async (address: string) => {
-      
       console.log("🌍 Geocoding address:", address);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
         address
       )}&key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`;
-  
       try {
         const response = await fetch(url);
         const data = await response.json();
@@ -69,8 +70,7 @@ export default function TruckInput() {
         return { lat: null, lng: null };
       }
     };
-  
-    // Geocode the main address (from the main address field)
+
     const mainCoords = await geocodeAddress(address);
     if (
       mainCoords.lat === null ||
@@ -82,7 +82,7 @@ export default function TruckInput() {
       );
       return;
     }
-    // Create the main schedule slot using the main address
+    // Use the top-level address as the main location
     const mainScheduleSlot = {
       day: "Main Location",
       time: "",
@@ -90,26 +90,21 @@ export default function TruckInput() {
       lat: mainCoords.lat,
       lng: mainCoords.lng,
     };
-  
-    // Filter out empty schedule entries (allowing the schedule part to be optional)
+
+    // Process additional schedule entries (filtering out empty ones)
     const filteredSchedule = schedule.filter(
       (slot) => slot.address && slot.address.trim() !== ""
     );
-  
-    // Convert each nonempty schedule entry to include lat/lng
     const scheduleWithCoords = await Promise.all(
       filteredSchedule.map(async (slot) => {
         const coords = await geocodeAddress(slot.address);
         return { ...slot, lat: coords.lat, lng: coords.lng };
       })
     );
-  
-    // Combine the main schedule slot with any additional schedule slots
+    // Combine main location with schedule entries
     const finalSchedule = [mainScheduleSlot, ...scheduleWithCoords];
-  
     console.log("🗺️ Final Schedule Data with Lat/Lng:", finalSchedule);
-  
-    // Check if any schedule slot is invalid
+
     const hasInvalid = finalSchedule.some(
       (slot) =>
         slot.lat === null ||
@@ -122,7 +117,7 @@ export default function TruckInput() {
       );
       return;
     }
-  
+
     const newTruck = {
       name: truckName,
       image: truckImage,
@@ -131,19 +126,21 @@ export default function TruckInput() {
       cuisine,
       restrictions,
       mealTimes,
-      mainLocation: address, // <- Use the top-level address state here
+      mainLocation: address,
       schedule: scheduleWithCoords,
     };
-  
-    // Save to localStorage or your DB
+
     let trucks = JSON.parse(localStorage.getItem("trucks") || "[]");
     trucks.push(newTruck);
     localStorage.setItem("trucks", JSON.stringify(trucks));
-  
-    // Confirmation, etc.
+
+    setConfirmationMessage("Truck created successfully!");
+    console.log("✅ Truck successfully added!", newTruck);
+
+    // Optionally, you can clear the form or navigate away
+    // router.refresh();
+    // router.push("/");
   };
-  
-  
 
   const addScheduleSlot = () => {
     setSchedule([...schedule, { day: "", time: "", address: "" }]);
@@ -156,9 +153,7 @@ export default function TruckInput() {
     setSchedule(updatedSchedule);
   };
 
-  const handleRestrictionChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleRestrictionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value, checked } = e.target;
     if (checked) {
       setRestrictions([...restrictions, value]);
@@ -177,14 +172,33 @@ export default function TruckInput() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 flex flex-col items-center">
-      <h1 className="text-3xl font-bold mb-6 text-black">
-        Add New Truck Location
-      </h1>
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded shadow-md w-full max-w-2xl space-y-4"
-      >
+    <div className="min-h-screen flex flex-col items-center" style={{ backgroundColor: "#f5d9bc" }}>
+      {/* Fixed Nav Bar */}
+      <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="text-xl font-bold">TruckTrack</div>
+          <ul className="flex space-x-4">
+            <li>
+              <Link href="/" legacyBehavior>
+                <a className="hover:text-gray-300">Home</a>
+              </Link>
+            </li>
+            <li>
+              <Link href="/about" legacyBehavior>
+                <a className="hover:text-gray-300">About</a>
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" legacyBehavior>
+                <a className="hover:text-gray-300">Contact</a>
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <h1 className="text-3xl font-bold mb-6 text-black pt-20">Add New Truck Location</h1>
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-md w-full max-w-2xl space-y-4">
         <div>
           <label className="block text-black mb-2">Truck Name</label>
           <input

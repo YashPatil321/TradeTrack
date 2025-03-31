@@ -5,16 +5,95 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function CleaningInput() {
+  const [serviceArea, setServiceArea] = useState("");
   const [cleaningName, setCleaningName] = useState("");
   const [cleaningImage, setCleaningImage] = useState("");
   const [description, setDescription] = useState("");
   const [hours, setHours] = useState("");
-  const [serviceArea, setServiceArea] = useState("");
   const [cleaningType, setCleaningType] = useState("");
   const [schedule, setSchedule] = useState([{ day: "", time: "", address: "" }]);
   const [confirmationMessage, setConfirmationMessage] = useState("");
 
   const router = useRouter();
+
+  const geocodeAddress = async (address: string) => {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`
+    );
+    const data = await response.json();
+    if (data.status === "OK") {
+      return data.results[0].geometry.location;
+    } else {
+      console.error("Geocoding Error:", data.status, data.error_message);
+      return { lat: null, lng: null };
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const mainCoords = await geocodeAddress(serviceArea);
+    if (
+      mainCoords.lat === null ||
+      mainCoords.lng === null ||
+      (mainCoords.lat === 0 && mainCoords.lng === 0)
+    ) {
+      setConfirmationMessage(
+        "Error: The service area address is invalid. Please check and try again."
+      );
+      return;
+    }
+    const mainScheduleSlot = {
+      day: "Main Location",
+      time: "",
+      address: serviceArea,
+      lat: mainCoords.lat,
+      lng: mainCoords.lng,
+    };
+
+    const filteredSchedule = schedule.filter(
+      (slot) => slot.address && slot.address.trim() !== ""
+    );
+    const scheduleWithCoords = await Promise.all(
+      filteredSchedule.map(async (slot) => {
+        const coords = await geocodeAddress(slot.address);
+        return { ...slot, lat: coords.lat, lng: coords.lng };
+      })
+    );
+    const finalSchedule = [mainScheduleSlot, ...scheduleWithCoords];
+
+    const hasInvalid = finalSchedule.some(
+      (slot) =>
+        slot.lat === null ||
+        slot.lng === null ||
+        (slot.lat === 0 && slot.lng === 0)
+    );
+    if (hasInvalid) {
+      setConfirmationMessage(
+        "Error: One or more addresses are invalid. Please check and try again."
+      );
+      return;
+    }
+
+    const newCleaning = {
+      name: cleaningName,
+      image: cleaningImage,
+      description,
+      hours,
+      cleaningType,
+      mainLocation: serviceArea,
+      schedule: finalSchedule,
+      trade: "cleaner",
+    };
+
+    let cleanings = JSON.parse(localStorage.getItem("cleanings") || "[]");
+    cleanings.push(newCleaning);
+    localStorage.setItem("cleanings", JSON.stringify(cleanings));
+
+    setConfirmationMessage("Cleaning service listed successfully!");
+    router.refresh();
+    router.push("/");
+  };
 
   const addScheduleSlot = () => {
     setSchedule([...schedule, { day: "", time: "", address: "" }]);
@@ -27,32 +106,8 @@ export default function CleaningInput() {
     setSchedule(updatedSchedule);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-
-    const newCleaning = {
-      name: cleaningName,
-      image: cleaningImage,
-      description,
-      hours,
-      serviceArea,
-      cleaningType,
-      schedule,
-      mainLocation: serviceArea,
-    };
-
-    let cleanings = JSON.parse(localStorage.getItem("cleanings") || "[]");
-    cleanings.push(newCleaning);
-    localStorage.setItem("cleanings", JSON.stringify(cleanings));
-
-    setConfirmationMessage("Cleaning service listed successfully!");
-    router.refresh();
-    router.push("/");
-  };
-
   return (
     <div className="min-h-screen flex flex-col items-center" style={{ backgroundColor: "#f5d9bc" }}>
-      {/* Nav Bar */}
       <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
         <div className="container mx-auto flex items-center justify-between">
           <div className="text-xl font-bold">ServiceHub</div>
@@ -68,7 +123,7 @@ export default function CleaningInput() {
               </Link>
             </li>
             <li>
-              <Link href="/list-your-service" legacyBehavior>
+              <Link href="/list_your_service" legacyBehavior>
                 <a className="hover:text-gray-300">List Your Service</a>
               </Link>
             </li>
