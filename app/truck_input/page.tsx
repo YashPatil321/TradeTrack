@@ -59,7 +59,7 @@ function TruckInput() {
       console.log("🌍 Geocoding address:", addr);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
         addr
-      )}&key=YOUR_API_KEY`;
+      )}&key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`;
       try {
         const response = await fetch(url);
         const data = await response.json();
