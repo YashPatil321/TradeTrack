@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ListYourTradeButton from "../components/ListYourTradeButton";
 
-// Unified interfaces for service data.
 interface ServiceSchedule {
   day: string;
   time: string;
@@ -21,6 +20,7 @@ interface ServiceSchedule {
 }
 
 interface Service {
+  _id?: string;
   name: string;
   description: string;
   image: string;
@@ -37,23 +37,32 @@ interface Service {
 }
 
 export default function Locator() {
-  const [locations, setLocations] = useState<Service[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState("");
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
-  // Merge service data from multiple localStorage keys.
+  // Fetch services from your backend API instead of localStorage.
   useEffect(() => {
-    const trucks = JSON.parse(localStorage.getItem("trucks") || "[]");
-    const plumbers = JSON.parse(localStorage.getItem("plumbers") || "[]");
-    const electricians = JSON.parse(localStorage.getItem("electricians") || "[]");
-    const cleaners = JSON.parse(localStorage.getItem("cleanings") || "[]");
-    setLocations([...trucks, ...plumbers, ...electricians, ...cleaners]);
+    async function fetchServices() {
+      try {
+        const res = await fetch("/api/services");
+        const json = await res.json();
+        if (json.success) {
+          setServices(json.data);
+        } else {
+          console.error("Error fetching services:", json.error);
+        }
+      } catch (error) {
+        console.error("Error fetching services:", error);
+      }
+    }
+    fetchServices();
   }, []);
 
-  // Load Google Maps script and initialize the map (once).
+  // Load Google Maps script and initialize the map (once)
   useEffect(() => {
     const initMap = () => {
       const mapElement = document.getElementById("map") as HTMLElement;
@@ -67,6 +76,7 @@ export default function Locator() {
 
     if (!window.google || !window.google.maps) {
       const script = document.createElement("script");
+      // Ensure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is set in your env variables
       script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
       script.async = true;
       script.defer = true;
@@ -80,7 +90,7 @@ export default function Locator() {
     }
   }, []);
 
-  // Update markers whenever map, locations, or selectedTrade changes.
+  // Update markers whenever map, services, or selectedTrade changes.
   useEffect(() => {
     if (!map) return;
     // Clear existing markers.
@@ -117,7 +127,7 @@ export default function Locator() {
     };
 
     // Loop through each service and add markers.
-    locations.forEach((service) => {
+    services.forEach((service) => {
       // If a trade filter is active, only add markers for matching services.
       if (selectedTrade && service.trade !== selectedTrade) return;
       if (Array.isArray(service.schedule)) {
@@ -137,11 +147,13 @@ export default function Locator() {
                 iconUrl = "/electrician.png";
                 break;
               case "cleaning":
-                iconUrl = "/electrician.png";
+                iconUrl = "/cleaning.png";
                 break;
               case "truck":
-                iconUrl = "/plumber.jpeg";
+                iconUrl = "/food-truck.png";
                 break;
+              default:
+                iconUrl = "/default.png";
             }
             createMarker(service, slot, iconUrl);
           } else {
@@ -151,7 +163,7 @@ export default function Locator() {
       }
     });
     setMarkers(newMarkers);
-  }, [map, locations, selectedTrade]);
+  }, [map, services, selectedTrade]);
 
   // "Search Near Me" functionality: recenter map on user's location.
   const searchNearMe = () => {
@@ -177,7 +189,7 @@ export default function Locator() {
     setIsModalOpen(false);
     setSelectedService(null);
   };
-  
+
   return (
     <>
       {/* Fixed Nav Bar */}
@@ -217,9 +229,9 @@ export default function Locator() {
               All Trades
             </button>
             <button
-              onClick={() => setSelectedTrade("food_truck")}
+              onClick={() => setSelectedTrade("truck")}
               className={`px-4 py-2 rounded text-sm ${
-                selectedTrade === "food_truck"
+                selectedTrade === "truck"
                   ? "bg-blue-500 text-white"
                   : "bg-gray-200 text-black hover:bg-gray-300"
               }`}
@@ -247,9 +259,9 @@ export default function Locator() {
               Electrician
             </button>
             <button
-              onClick={() => setSelectedTrade("cleaner")}
+              onClick={() => setSelectedTrade("cleaning")}
               className={`px-4 py-2 rounded text-sm ${
-                selectedTrade === "cleaner"
+                selectedTrade === "cleaning"
                   ? "bg-blue-500 text-white"
                   : "bg-gray-200 text-black hover:bg-gray-300"
               }`}
@@ -301,7 +313,7 @@ export default function Locator() {
               {selectedService.trade === "truck" && (
                 <>
                   <p className="text-black mb-2">
-                    <strong>Cuisine:</strong> {selectedService.cuisine}
+                    <strong>Cuisine:</strong> {selectedService.cuisine || "Not specified"}
                   </p>
                   <p className="text-black mb-2">
                     <strong>Dietary Restrictions:</strong>{" "}
@@ -337,9 +349,9 @@ export default function Locator() {
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-black">Main Location</h3>
                   <p className="text-black">
-                    {selectedService.mainLocation
-                      ? selectedService.mainLocation
-                      : (selectedService.schedule && selectedService.schedule[0]?.address) || "Not specified"}
+                    {selectedService.mainLocation ||
+                      (selectedService.schedule && selectedService.schedule[0]?.address) ||
+                      "Not specified"}
                   </p>
                 </div>
               </div>

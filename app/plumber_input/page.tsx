@@ -1,10 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 
-export default function PlumberInput() {
+function PlumberInput() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // Redirect to login if unauthenticated (optional)
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
   const [serviceArea, setServiceArea] = useState("");
   const [plumberName, setPlumberName] = useState("");
   const [plumberImage, setPlumberImage] = useState("");
@@ -14,13 +25,11 @@ export default function PlumberInput() {
   const [schedule, setSchedule] = useState([{ day: "", time: "", address: "" }]);
   const [confirmationMessage, setConfirmationMessage] = useState("");
 
-  const router = useRouter();
-
-  // Geocode an address to get its lat/lng
-  const geocodeAddress = async (address: string) => {
+  // Geocode an address to get its lat/lng using Google Geocoding API
+  const geocodeAddress = async (addr: string) => {
     const response = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        address
+        addr
       )}&key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`
     );
     const data = await response.json();
@@ -47,9 +56,10 @@ export default function PlumberInput() {
       );
       return;
     }
+    // Use the service area as the main location for the schedule
     const mainScheduleSlot = {
       day: "Main Location",
-      time: "",
+      time: "N/A", // Default value, change if needed
       address: serviceArea,
       lat: mainCoords.lat,
       lng: mainCoords.lng,
@@ -66,8 +76,8 @@ export default function PlumberInput() {
       })
     );
     const finalSchedule = [mainScheduleSlot, ...scheduleWithCoords];
+    console.log("Final Schedule Data with Lat/Lng:", finalSchedule);
 
-    // Validate final schedule coordinates
     const hasInvalid = finalSchedule.some(
       (slot) =>
         slot.lat === null ||
@@ -81,6 +91,13 @@ export default function PlumberInput() {
       return;
     }
 
+    // Ensure the user is logged in and has an email
+    if (!session?.user?.email) {
+      setConfirmationMessage("Error: You must be logged in to add a service.");
+      return;
+    }
+
+    // Build the new plumber object; trade is set to "plumber"
     const newPlumber = {
       name: plumberName,
       image: plumberImage,
@@ -89,16 +106,28 @@ export default function PlumberInput() {
       certifications,
       mainLocation: serviceArea,
       schedule: finalSchedule,
+      userEmail: session.user.email, // Associate with logged-in user
       trade: "plumber",
     };
 
-    let plumbers = JSON.parse(localStorage.getItem("plumbers") || "[]");
-    plumbers.push(newPlumber);
-    localStorage.setItem("plumbers", JSON.stringify(plumbers));
-
-    setConfirmationMessage("Plumber service listed successfully!");
-    router.refresh();
-    router.push("/");
+    try {
+      const res = await fetch("/api/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPlumber),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setConfirmationMessage("Plumber service listed successfully!");
+        console.log("Plumber service successfully added!", newPlumber);
+        router.push("/profile"); // Redirect to profile after submission
+      } else {
+        setConfirmationMessage("Error creating plumber service: " + json.error);
+      }
+    } catch (error) {
+      console.error("Error creating plumber service:", error);
+      setConfirmationMessage("Error creating plumber service, please try again later.");
+    }
   };
 
   const addScheduleSlot = () => {
@@ -140,6 +169,7 @@ export default function PlumberInput() {
 
       <h1 className="text-3xl font-bold mb-6 text-black pt-20">List Your Plumber Service</h1>
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-md w-full max-w-2xl space-y-4">
+        {/* Plumber Name */}
         <div>
           <label className="block text-black mb-2">Plumber Name</label>
           <input
@@ -150,6 +180,8 @@ export default function PlumberInput() {
             required
           />
         </div>
+
+        {/* Service Area (Address) */}
         <div>
           <label className="block text-black mb-2">Service Area (Address)</label>
           <input
@@ -160,6 +192,8 @@ export default function PlumberInput() {
             required
           />
         </div>
+
+        {/* Plumber Image URL */}
         <div>
           <label className="block text-black mb-2">Plumber Image URL</label>
           <input
@@ -169,6 +203,8 @@ export default function PlumberInput() {
             className="w-full p-2 border border-gray-300 rounded text-black"
           />
         </div>
+
+        {/* Description */}
         <div>
           <label className="block text-black mb-2">Description</label>
           <textarea
@@ -178,6 +214,8 @@ export default function PlumberInput() {
             rows={3}
           />
         </div>
+
+        {/* Hours of Operation */}
         <div>
           <label className="block text-black mb-2">Hours of Operation</label>
           <input
@@ -187,6 +225,8 @@ export default function PlumberInput() {
             className="w-full p-2 border border-gray-300 rounded text-black"
           />
         </div>
+
+        {/* Certifications / Specialties */}
         <div>
           <label className="block text-black mb-2">Certifications / Specialties</label>
           <input
@@ -198,6 +238,7 @@ export default function PlumberInput() {
           />
         </div>
 
+        {/* Schedule Section (Optional) */}
         <h2 className="text-2xl font-bold text-black">Schedule (Optional)</h2>
         {schedule.map((slot, index) => (
           <div key={index} className="border border-gray-300 p-4 mb-4 rounded">
@@ -233,12 +274,21 @@ export default function PlumberInput() {
             </div>
           </div>
         ))}
-        <button type="button" onClick={addScheduleSlot} className="bg-blue-500 text-white p-2 rounded w-full">
+        <button
+          type="button"
+          onClick={addScheduleSlot}
+          className="bg-blue-500 text-white p-2 rounded w-full"
+        >
           Add Another Schedule Slot
         </button>
-        <button type="submit" className="mt-4 bg-green-500 text-white p-2 rounded w-full">
+
+        <button
+          type="submit"
+          className="mt-4 bg-green-500 text-white p-2 rounded w-full"
+        >
           Submit
         </button>
+
         {confirmationMessage && (
           <div className="mt-4 p-4 bg-gray-200 rounded text-black">
             {confirmationMessage}
@@ -246,5 +296,13 @@ export default function PlumberInput() {
         )}
       </form>
     </div>
+  );
+}
+
+export default function PlumberInputPage() {
+  return (
+    <SessionProvider>
+      <PlumberInput />
+    </SessionProvider>
   );
 }
