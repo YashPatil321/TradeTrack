@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 
-export default function TruckInput() {
+function TruckInput() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  
   const [address, setAddress] = useState("");
   const [truckName, setTruckName] = useState("");
   const [truckImage, setTruckImage] = useState("");
@@ -16,13 +20,18 @@ export default function TruckInput() {
   const [schedule, setSchedule] = useState([{ day: "", time: "", address: "" }]);
   const [confirmationMessage, setConfirmationMessage] = useState("");
 
-  const router = useRouter();
+  // Redirect to login if unauthenticated (optional)
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
 
-  // Function to get lat/lng for an address (using Google Geocoding API)
-  const getLatLngFromAddress = async (address: string) => {
+  // Function to get lat/lng using Google Geocoding API
+  const getLatLngFromAddress = async (addr: string) => {
     const response = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        address
+        addr
       )}&key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`
     );
     const data = await response.json();
@@ -34,7 +43,7 @@ export default function TruckInput() {
     }
   };
 
-  // Handler for file input change – creates a preview URL
+  // File input change handler – creates a preview URL
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -45,17 +54,16 @@ export default function TruckInput() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    // Geocode the main address (top-level field)
-    const geocodeAddress = async (address: string) => {
-      console.log("🌍 Geocoding address:", address);
+  
+    const geocodeAddress = async (addr: string) => {
+      console.log("🌍 Geocoding address:", addr);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        address
-      )}&key=AIzaSyD9AQtE_WlHC0RvWvZ8BoP2ypr3EByvRDs`;
+        addr
+      )}&key=YOUR_API_KEY`;
       try {
         const response = await fetch(url);
         const data = await response.json();
-        console.log("🔍 Geocoding Response for", address, ":", data);
+        console.log("🔍 Geocoding Response for", addr, ":", data);
         if (data.status === "OK") {
           return {
             lat: data.results[0].geometry.location.lat,
@@ -70,7 +78,7 @@ export default function TruckInput() {
         return { lat: null, lng: null };
       }
     };
-
+  
     const mainCoords = await geocodeAddress(address);
     if (
       mainCoords.lat === null ||
@@ -82,15 +90,15 @@ export default function TruckInput() {
       );
       return;
     }
-    // Use the top-level address as the main location
+    // Use the main address as the main location for the schedule with default time
     const mainScheduleSlot = {
       day: "Main Location",
-      time: "",
+      time: "N/A", // Updated default value
       address: address,
       lat: mainCoords.lat,
       lng: mainCoords.lng,
     };
-
+  
     // Process additional schedule entries (filtering out empty ones)
     const filteredSchedule = schedule.filter(
       (slot) => slot.address && slot.address.trim() !== ""
@@ -104,7 +112,7 @@ export default function TruckInput() {
     // Combine main location with schedule entries
     const finalSchedule = [mainScheduleSlot, ...scheduleWithCoords];
     console.log("🗺️ Final Schedule Data with Lat/Lng:", finalSchedule);
-
+  
     const hasInvalid = finalSchedule.some(
       (slot) =>
         slot.lat === null ||
@@ -117,7 +125,12 @@ export default function TruckInput() {
       );
       return;
     }
-
+  
+    if (!session?.user?.email) {
+      setConfirmationMessage("Error: You must be logged in to add a service.");
+      return;
+    }
+  
     const newTruck = {
       name: truckName,
       image: truckImage,
@@ -128,20 +141,30 @@ export default function TruckInput() {
       mealTimes,
       mainLocation: address,
       schedule: scheduleWithCoords,
+      userEmail: session.user.email,
+      trade: "food_truck",
     };
-
-    let trucks = JSON.parse(localStorage.getItem("trucks") || "[]");
-    trucks.push(newTruck);
-    localStorage.setItem("trucks", JSON.stringify(trucks));
-
-    setConfirmationMessage("Truck created successfully!");
-    console.log("✅ Truck successfully added!", newTruck);
-
-    // Optionally, you can clear the form or navigate away
-    // router.refresh();
-    // router.push("/");
+  
+    try {
+      const res = await fetch("/api/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTruck),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setConfirmationMessage("Truck created successfully!");
+        console.log("✅ Truck successfully added!", newTruck);
+        router.push("/profile"); // Redirect to profile after successful submission
+      } else {
+        setConfirmationMessage("Error creating truck: " + json.error);
+      }
+    } catch (error) {
+      console.error("Error creating truck:", error);
+      setConfirmationMessage("Error creating truck, please try again later.");
+    }
   };
-
+  
   const addScheduleSlot = () => {
     setSchedule([...schedule, { day: "", time: "", address: "" }]);
   };
@@ -199,6 +222,7 @@ export default function TruckInput() {
 
       <h1 className="text-3xl font-bold mb-6 text-black pt-20">Add New Truck Location</h1>
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-md w-full max-w-2xl space-y-4">
+        {/* Truck Name */}
         <div>
           <label className="block text-black mb-2">Truck Name</label>
           <input
@@ -210,6 +234,7 @@ export default function TruckInput() {
           />
         </div>
 
+        {/* Address */}
         <div>
           <label className="block text-black mb-2">Address</label>
           <input
@@ -221,6 +246,7 @@ export default function TruckInput() {
           />
         </div>
 
+        {/* Truck Image */}
         <div>
           <label className="block text-black mb-2">Truck Image</label>
           <input 
@@ -238,6 +264,7 @@ export default function TruckInput() {
           )}
         </div>
 
+        {/* Description */}
         <div>
           <label className="block text-black mb-2">Description</label>
           <textarea
@@ -248,6 +275,7 @@ export default function TruckInput() {
           />
         </div>
 
+        {/* Hours of Operation */}
         <div>
           <label className="block text-black mb-2">Hours of Operation</label>
           <input
@@ -258,6 +286,7 @@ export default function TruckInput() {
           />
         </div>
 
+        {/* Cuisine Type */}
         <div>
           <label className="block text-black mb-2">Cuisine Type</label>
           <select
@@ -275,6 +304,7 @@ export default function TruckInput() {
           </select>
         </div>
 
+        {/* Dietary Restrictions */}
         <div>
           <label className="block text-black mb-2">Dietary Restrictions</label>
           <div className="flex space-x-4">
@@ -305,6 +335,7 @@ export default function TruckInput() {
           </div>
         </div>
 
+        {/* Meal Times */}
         <div>
           <label className="block text-black mb-2">Meal Times</label>
           <div className="flex space-x-4">
@@ -335,6 +366,7 @@ export default function TruckInput() {
           </div>
         </div>
 
+        {/* Schedule */}
         <h2 className="text-2xl font-bold text-black">Schedule</h2>
         {schedule.map((slot, index) => (
           <div key={index} className="border border-gray-300 p-4 mb-4 rounded">
@@ -391,5 +423,14 @@ export default function TruckInput() {
         )}
       </form>
     </div>
+  );
+}
+
+// Export TruckInputPage wrapping the TruckInput component in a SessionProvider.
+export default function TruckInputPage() {
+  return (
+    <SessionProvider>
+      <TruckInput />
+    </SessionProvider>
   );
 }
