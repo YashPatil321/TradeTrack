@@ -1,5 +1,5 @@
 "use client";
-import { SessionProvider, signIn, signOut, useSession } from "next-auth/react";
+import { SessionProvider, useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -9,7 +9,7 @@ function LoginContent() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.push("/");
+      router.push("/list_your_service");
     }
   }, [status, router]);
 
@@ -26,7 +26,9 @@ function LoginContent() {
           <button onClick={() => signOut()}>Sign out</button>
         </>
       ) : (
-        <button onClick={() => signIn("google")}>Sign in with Google</button>
+        <button onClick={() => signIn("google", { callbackUrl: process.env.NEXTAUTH_URL || "http://localhost:3000/" })}>
+          Add Your Trade
+        </button>
       )}
     </div>
   );
