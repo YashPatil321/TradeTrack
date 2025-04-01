@@ -9,6 +9,7 @@ declare global {
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ListYourTradeButton from "../components/ListYourTradeButton";
 
 // Unified interfaces for service data.
 interface ServiceSchedule {
@@ -176,7 +177,7 @@ export default function Locator() {
     setIsModalOpen(false);
     setSelectedService(null);
   };
-
+  
   return (
     <>
       {/* Fixed Nav Bar */}
@@ -195,9 +196,7 @@ export default function Locator() {
               </Link>
             </li>
             <li>
-              <Link href="/list_your_service" legacyBehavior>
-                <a className="hover:text-gray-300">List Your Trade</a>
-              </Link>
+              <ListYourTradeButton />
             </li>
           </ul>
         </div>

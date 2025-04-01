@@ -1,14 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Example of setting a base path (if your app is hosted in a subpath)
+  // Base path if needed
   // basePath: '/your-subpath',
 
-  // Example of adding environment variables
+  // Expose environment variables (make sure these are set in your .env.local)
   env: {
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL, // e.g., "http://localhost:3000" for local dev
     CUSTOM_API_ENDPOINT: process.env.CUSTOM_API_ENDPOINT || 'https://default-api.example.com',
   },
 
-  // Example of setting up redirects
+  // Setting up redirects
   async redirects() {
     return [
       {
@@ -19,28 +20,24 @@ const nextConfig = {
     ];
   },
 
-  // Example of setting up rewrites
+  // Remove or adjust rewrites to avoid proxying local API routes
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `https://external-api.example.com/:path*`,
-      },
-    ];
+    // If you don't need to proxy any routes, simply return an empty array.
+    // Otherwise, ensure that your API routes (like /api/auth) are not rewritten.
+    return [];
   },
 
-  // Example of configuring image domains
+  // Configuring image domains
   images: {
-    domains: ['example.com'], // Replace with domains you want to allow
+    domains: ['example.com'], // Update with the domains you plan to use
   },
 
-  // Example of configuring internationalization (i18n)
+  // Internationalization configuration
   i18n: {
     locales: ['en', 'es'],
     defaultLocale: 'en',
   },
 
-  // Add any other Next.js specific configurations here
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -54,7 +51,6 @@ const nextConfig = {
     return config;
   },
 
-  // Transpile specific packages
   transpilePackages: ['google-auth-library'],
 };
 
