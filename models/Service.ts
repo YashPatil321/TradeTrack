@@ -9,9 +9,10 @@ const ServiceSchema = new Schema({
   cuisine: { type: String },
   restrictions: [String],
   mealTimes: [String],
-  certifications: { type: String }, // plumber
-  cleaningType: { type: String },   // cleaner
-  license: { type: String },        // electrician
+  // Additional fields for specific trades
+  certifications: { type: String },
+  cleaningType: { type: String },
+  license: { type: String },
   mainLocation: { type: String, required: true },
   schedule: [
     {
@@ -27,6 +28,8 @@ const ServiceSchema = new Schema({
     enum: ["food_truck", "plumber", "electrician", "cleaner"],
     required: true,
   },
+  // Associate the service with the user (e.g., by storing their email)
+  userEmail: { type: String, required: true },
 });
 
 export default models.Service || model("Service", ServiceSchema);
