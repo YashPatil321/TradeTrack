@@ -10,9 +10,10 @@ const ServiceSchema = new Schema({
   restrictions: [String],
   mealTimes: [String],
   // Additional fields for specific trades
-  certifications: { type: String },
-  cleaningType: { type: String },
-  license: { type: String },
+  certifications: { type: String }, // plumber
+  license: { type: String }, // electrician
+  skillsAndServices: { type: String }, // handyman
+  specialties: { type: String }, // painter
   mainLocation: { type: String, required: true },
   schedule: [
     {
@@ -25,7 +26,7 @@ const ServiceSchema = new Schema({
   ],
   trade: {
     type: String,
-    enum: ["food_truck", "plumber", "electrician", "cleaner"],
+    enum: ["food_truck", "plumber", "electrician", "handyman", "painter"],
     required: true,
   },
   // Associate the service with the user (e.g., by storing their email)
