@@ -28,12 +28,13 @@ interface Service {
   cuisine?: string;
   restrictions?: string[];
   mealTimes?: string[];
-  certifications?: string;    // for plumber
-  cleaningType?: string;      // for cleaner
-  license?: string;           // for electrician
+  certifications?: string;     // for plumber
+  license?: string;            // for electrician
+  skillsAndServices?: string;  // for handyman
+  specialties?: string;        // for painter
   mainLocation: string;
   schedule: ServiceSchedule[];
-  trade: "truck" | "plumber" | "electrician" | "cleaning";
+  trade: "food_truck" | "plumber" | "electrician" | "handyman" | "painter";
 }
 
 export default function Locator() {
@@ -146,11 +147,14 @@ export default function Locator() {
               case "electrician":
                 iconUrl = "/electrician.png";
                 break;
-              case "cleaning":
-                iconUrl = "/cleaning.png";
+              case "handyman":
+                iconUrl = "/handyman.png";
                 break;
-              case "truck":
-                iconUrl = "/food-truck.png";
+              case "painter":
+                iconUrl = "/painter.png";
+                break;
+              case "food_truck":
+                iconUrl = "/truck.png";
                 break;
               default:
                 iconUrl = "/default.png";
@@ -229,9 +233,9 @@ export default function Locator() {
               All Trades
             </button>
             <button
-              onClick={() => setSelectedTrade("truck")}
+              onClick={() => setSelectedTrade("food_truck")}
               className={`px-4 py-2 rounded text-sm ${
-                selectedTrade === "truck"
+                selectedTrade === "food_truck"
                   ? "bg-blue-500 text-white"
                   : "bg-gray-200 text-black hover:bg-gray-300"
               }`}
@@ -259,14 +263,24 @@ export default function Locator() {
               Electrician
             </button>
             <button
-              onClick={() => setSelectedTrade("cleaning")}
+              onClick={() => setSelectedTrade("handyman")}
               className={`px-4 py-2 rounded text-sm ${
-                selectedTrade === "cleaning"
+                selectedTrade === "handyman"
                   ? "bg-blue-500 text-white"
                   : "bg-gray-200 text-black hover:bg-gray-300"
               }`}
             >
-              Cleaner
+              Handyman
+            </button>
+            <button
+              onClick={() => setSelectedTrade("painter")}
+              className={`px-4 py-2 rounded text-sm ${
+                selectedTrade === "painter"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
+              }`}
+            >
+              Painter
             </button>
           </div>
           <button
@@ -310,7 +324,7 @@ export default function Locator() {
               <p className="text-black mb-2">
                 <strong>Hours:</strong> {selectedService.hours}
               </p>
-              {selectedService.trade === "truck" && (
+              {selectedService.trade === "food_truck" && (
                 <>
                   <p className="text-black mb-2">
                     <strong>Cuisine:</strong> {selectedService.cuisine || "Not specified"}
@@ -340,9 +354,16 @@ export default function Locator() {
                   <strong>License:</strong> {selectedService.license || "Not specified"}
                 </p>
               )}
-              {selectedService.trade === "cleaning" && (
+              {selectedService.trade === "handyman" && (
                 <p className="text-black mb-2">
-                  <strong>Cleaning Type:</strong> {selectedService.cleaningType || "Not specified"}
+                  <strong>Skills & Services:</strong>{" "}
+                  {selectedService.skillsAndServices || "Not specified"}
+                </p>
+              )}
+              {selectedService.trade === "painter" && (
+                <p className="text-black mb-2">
+                  <strong>Specialties:</strong>{" "}
+                  {selectedService.specialties || "Not specified"}
                 </p>
               )}
               <div className="flex flex-col md:flex-row md:space-x-4 mb-4">

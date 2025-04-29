@@ -8,7 +8,7 @@ export default function ListYourService() {
       {/* Fixed Nav Bar */}
       <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
         <div className="container mx-auto flex items-center justify-between">
-          <div className="text-xl font-bold">TruckTrack</div>
+          <div className="text-xl font-bold">TradeTrack</div>
           <ul className="flex space-x-4">
             <li>
               <Link href="/" legacyBehavior>
@@ -33,10 +33,10 @@ export default function ListYourService() {
       <div className="container mx-auto pt-24 px-4">
         <h1 className="text-4xl font-bold text-black mb-8 text-center">List Your Service</h1>
         <p className="text-lg text-black mb-8 text-center">
-          Welcome! Choose the type of service you’d like to list and get started.
+          Welcome! Choose the type of service you'd like to list and get started.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Food Truck Card */}
           <Link href="/truck_input" legacyBehavior>
             <a className="block bg-white p-6 rounded shadow hover:shadow-lg transition">
@@ -57,16 +57,6 @@ export default function ListYourService() {
             </a>
           </Link>
           
-          {/* Cleaning Services Card */}
-          <Link href="/cleaning_input" legacyBehavior>
-            <a className="block bg-white p-6 rounded shadow hover:shadow-lg transition">
-              <h2 className="text-2xl font-bold mb-2 text-black">Cleaning Services</h2>
-              <p className="text-gray-700">
-                Promote your professional cleaning services and find new clients in your area.
-              </p>
-            </a>
-          </Link>
-          
           {/* Electrician Card */}
           <Link href="/electrician_input" legacyBehavior>
             <a className="block bg-white p-6 rounded shadow hover:shadow-lg transition">
@@ -77,7 +67,25 @@ export default function ListYourService() {
             </a>
           </Link>
           
-          {/* You can add more cards here as needed */}
+          {/* Handyman Card */}
+          <Link href="/handyman_input" legacyBehavior>
+            <a className="block bg-white p-6 rounded shadow hover:shadow-lg transition">
+              <h2 className="text-2xl font-bold mb-2 text-black">Handyman</h2>
+              <p className="text-gray-700">
+                Provide a range of home repair and maintenance services to nearby customers.
+              </p>
+            </a>
+          </Link>
+          
+          {/* Painter Card */}
+          <Link href="/painter_input" legacyBehavior>
+            <a className="block bg-white p-6 rounded shadow hover:shadow-lg transition">
+              <h2 className="text-2xl font-bold mb-2 text-black">Painter</h2>
+              <p className="text-gray-700">
+                Showcase your painting expertise for residential and commercial projects.
+              </p>
+            </a>
+          </Link>
         </div>
       </div>
     </div>
