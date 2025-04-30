@@ -33,20 +33,10 @@ export default function ListYourService() {
       <div className="container mx-auto pt-24 px-4">
         <h1 className="text-4xl font-bold text-black mb-8 text-center">List Your Service</h1>
         <p className="text-lg text-black mb-8 text-center">
-          Welcome! Choose the type of service you'd like to list and get started.
+          Welcome! Choose the type of service you&apos;d like to list and get started.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Food Truck Card */}
-          <Link href="/truck_input" legacyBehavior>
-            <a className="block bg-white p-6 rounded shadow hover:shadow-lg transition">
-              <h2 className="text-2xl font-bold mb-2 text-black">Food Truck</h2>
-              <p className="text-gray-700">
-                Showcase your food truck, schedule your locations, and reach hungry customers.
-              </p>
-            </a>
-          </Link>
-          
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
           {/* Plumber Card */}
           <Link href="/plumber_input" legacyBehavior>
             <a className="block bg-white p-6 rounded shadow hover:shadow-lg transition">
