@@ -177,7 +177,7 @@ export default function Locator() {
           const { latitude, longitude } = position.coords;
           if (!map) return;
           map.setCenter({ lat: latitude, lng: longitude });
-          map.setZoom(12);
+          map.setZoom(13);
         },
         (error) => {
           console.error("Error getting geolocation:", error);
