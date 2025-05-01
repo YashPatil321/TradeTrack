@@ -269,7 +269,7 @@ function HandymanInput() {
         {/* Handyman Image Upload */}
         <div>
           <label className="block text-black mb-2">Upload Image</label>
-          <ImageUploader onImageUploaded={handleImageUploaded} />
+          <ImageUploader onImageUploadedAction={handleImageUploaded} />
         </div>
 
         {/* Description */}

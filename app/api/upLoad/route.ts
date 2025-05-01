@@ -1,10 +1,12 @@
 // app/api/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "../../../lib/auth";
 import { writeFile } from "fs/promises";
 import path from "path";
-import { v4 as uuidv4 } from "uuid"; // You'll need to install this package
+// @ts-ignore - Add TypeScript ignore for uuid module
+import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
 
 // Maximum file size (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -58,7 +60,15 @@ export async function POST(request: NextRequest) {
     // Define the upload directory and create it if it doesn't exist
     const uploadDir = path.join(process.cwd(), "public/uploads");
     try {
+      // Make sure the directory exists
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+        console.log(`Created directory: ${uploadDir}`);
+      }
+      
+      // Write the file
       await writeFile(`${uploadDir}/${uniqueFilename}`, new Uint8Array(buffer));
+      console.log(`File saved: ${uploadDir}/${uniqueFilename}`);
     } catch (error) {
       console.error("Error saving file:", error);
       return NextResponse.json(
