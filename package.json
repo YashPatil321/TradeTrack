@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@stripe/react-stripe-js": "^3.6.0",
+    "@stripe/stripe-js": "^7.2.0",
     "google-auth-library": "^9.14.0",
     "google-spreadsheet": "^4.1.4",
     "googleapis": "^143.0.0",
@@ -23,6 +25,7 @@
     "react-drag-drop-files": "^3.0.1",
     "react-dropzone": "^14.3.8",
     "react-router-dom": "^6.26.1",
+    "stripe": "^18.1.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
