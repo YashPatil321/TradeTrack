@@ -5,13 +5,13 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 interface ImageUploaderProps {
-  onImageUploaded: (imageUrl: string) => void;
+  onImageUploadedAction: (imageUrl: string) => void;
   currentImage?: string;
   className?: string;
 }
 
 // Note: using default export here
-export default function ImageUploader({ onImageUploaded, currentImage, className = '' }: ImageUploaderProps) {
+export default function ImageUploader({ onImageUploadedAction, currentImage, className = '' }: ImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(currentImage || null);
@@ -35,14 +35,17 @@ export default function ImageUploader({ onImageUploaded, currentImage, className
       // Create form data
       const formData = new FormData();
       formData.append('file', file);
-
-      // Send the request
-      const response = await fetch('/api/upload', {
+      
+      console.log('Uploading file:', file.name);
+      
+      // Send the request to the new endpoint
+      const response = await fetch('/api/upload-image', {
         method: 'POST',
         body: formData,
       });
 
       const result = await response.json();
+      console.log('Upload result:', result);
 
       if (!result.success) {
         setError(result.error || 'Upload failed');
@@ -50,14 +53,14 @@ export default function ImageUploader({ onImageUploaded, currentImage, className
       }
 
       // Call the callback with the URL
-      onImageUploaded(result.url);
+      onImageUploadedAction(result.url);
     } catch (err) {
       console.error('Upload error:', err);
       setError('An error occurred during upload');
     } finally {
       setIsUploading(false);
     }
-  }, [onImageUploaded]);
+  }, [onImageUploadedAction]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
