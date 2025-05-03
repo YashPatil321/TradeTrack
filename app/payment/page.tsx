@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, SessionProvider } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import StripeProvider from '@/components/StripeProvider';
 import CheckoutForm from '@/components/CheckoutForm';
 import Link from 'next/link';
 
-export default function PaymentPage() {
+function PaymentPageContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const serviceId = searchParams.get('service_id');
@@ -147,5 +147,13 @@ export default function PaymentPage() {
         </StripeProvider>
       )}
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <SessionProvider>
+      <PaymentPageContent />
+    </SessionProvider>
   );
 }

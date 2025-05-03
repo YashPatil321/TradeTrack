@@ -31,7 +31,7 @@ export default function ImageUploader({ onImageUploadedAction, currentImage, cla
     // Start uploading
     setIsUploading(true);
 
-    try {
+    try { // 
       // Create form data
       const formData = new FormData();
       formData.append('file', file);

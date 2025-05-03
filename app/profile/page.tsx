@@ -1,9 +1,10 @@
 "use client";
 
 import { SessionProvider, useSession, signOut, signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import StripeConnect from "@/components/profile/StripeConnect";
 
 interface Service {
   _id: string;
@@ -19,8 +20,25 @@ interface Service {
 function ProfileContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasHandymanService, setHasHandymanService] = useState(false);
+  const [stripeConnectSuccess, setStripeConnectSuccess] = useState(false);
+
+  // Check if Stripe Connect is successful
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      setStripeConnectSuccess(true);
+      
+      // Clear the URL parameters after 5 seconds
+      const timer = setTimeout(() => {
+        router.replace('/profile');
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, router]);
 
   // Redirect to login if unauthenticated
   useEffect(() => {
@@ -42,6 +60,12 @@ function ProfileContent() {
             (service: Service) => service.userEmail === session?.user?.email
           );
           setServices(userServices);
+          
+          // Check if user has any handyman services
+          const handymanServices = userServices.filter(
+            (service: Service) => service.trade === "handyman"
+          );
+          setHasHandymanService(handymanServices.length > 0);
         }
       } catch (error) {
         console.error("Error fetching services:", error);
@@ -187,6 +211,24 @@ function ProfileContent() {
             </div>
           </div>
         </div>
+
+        {/* Stripe Connect Success Message */}
+        {stripeConnectSuccess && (
+          <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 mb-6 flex items-start">
+            <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <div>
+              <p className="font-medium">Stripe account setup successful!</p>
+              <p className="text-sm mt-1">Your Stripe account has been connected to TradeTrack. You can now receive payments for your handyman services.</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Stripe Connect Section (Only for Handyman Service Owners) */}
+        {hasHandymanService && (
+          <StripeConnect />
+        )}
 
         {/* Services Section */}
         <div className="bg-white shadow-lg rounded-lg p-6">
