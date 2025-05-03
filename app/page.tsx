@@ -8,8 +8,11 @@ declare global {
 /// <reference types="@types/google.maps" />
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import ListYourTradeButton from "../components/ListYourTradeButton";
+import PayNowButton from "../components/PayNowButton";
 
 interface ServiceSchedule {
   day: string;
@@ -17,6 +20,11 @@ interface ServiceSchedule {
   address: string;
   lat: number;
   lng: number;
+}
+
+interface PointLocation {
+  type: "Point";
+  coordinates: number[];
 }
 
 interface Service {
@@ -33,11 +41,18 @@ interface Service {
   skillsAndServices?: string;  // for handyman
   specialties?: string;        // for painter
   mainLocation: string;
-  schedule: ServiceSchedule[];
+  schedule?: ServiceSchedule[];
   trade: "food_truck" | "plumber" | "electrician" | "handyman" | "painter";
+  userEmail: string;
+  price?: number;
+  priceType?: string;
+  stripeAccountId?: string;
+  location?: PointLocation;    // GeoJSON location for handyman/static services
 }
 
-export default function Locator() {
+function Locator() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -98,10 +113,10 @@ export default function Locator() {
     markers.forEach((marker) => marker.setMap(null));
     const newMarkers: google.maps.Marker[] = [];
 
-    // Helper function: create marker for a service schedule slot with an icon.
-    const createMarker = (service: Service, slot: ServiceSchedule, iconUrl: string) => {
+    // Helper function: create marker for a service with an icon.
+    const createMarker = (service: Service, location: { lat: number, lng: number, address?: string }, iconUrl: string) => {
       const marker = new window.google.maps.Marker({
-        position: { lat: slot.lat, lng: slot.lng },
+        position: { lat: location.lat, lng: location.lng },
         map,
         title: service.name,
         icon: {
@@ -114,7 +129,7 @@ export default function Locator() {
           <div style="padding:10px; max-width:200px; color:black;">
             <img src="${service.image}" alt="${service.name}" style="width:100px; height:auto;" />
             <h3>${service.name}</h3>
-            <p>Location: ${slot.address}</p>
+            <p>Location: ${location.address || service.mainLocation || 'Address not specified'}</p>
           </div>
         `,
       });
@@ -131,7 +146,45 @@ export default function Locator() {
     services.forEach((service) => {
       // If a trade filter is active, only add markers for matching services.
       if (selectedTrade && service.trade !== selectedTrade) return;
-      if (Array.isArray(service.schedule)) {
+      
+      let iconUrl = "";
+      switch (service.trade) {
+        case "plumber":
+          iconUrl = "/plumber.png";
+          break;
+        case "electrician":
+          iconUrl = "/electrician.png";
+          break;
+        case "handyman":
+          iconUrl = "/handyman.png";
+          break;
+        case "painter":
+          iconUrl = "/painter.png";
+          break;
+        case "food_truck":
+          iconUrl = "/truck.png";
+          break;
+        default:
+          iconUrl = "/default.png";
+      }
+      
+      // Check for service.location first (used by handyman services)
+      if (service.location && service.location.type === "Point" && Array.isArray(service.location.coordinates)) {
+        const lng = service.location.coordinates[0];
+        const lat = service.location.coordinates[1];
+        
+        if (typeof lat === "number" && typeof lng === "number" && lat !== 0 && lng !== 0) {
+          // Create a location object for the marker
+          const locationObj = {
+            lat,
+            lng,
+            address: service.mainLocation
+          };
+          createMarker(service, locationObj, iconUrl);
+        }
+      }
+      // Fall back to schedule if location is not available (for food trucks etc)
+      else if (Array.isArray(service.schedule)) {
         service.schedule.forEach((slot) => {
           if (
             typeof slot.lat === "number" &&
@@ -139,31 +192,19 @@ export default function Locator() {
             slot.lat !== 0 &&
             slot.lng !== 0
           ) {
-            let iconUrl = "";
-            switch (service.trade) {
-              case "plumber":
-                iconUrl = "/plumber.png";
-                break;
-              case "electrician":
-                iconUrl = "/electrician.png";
-                break;
-              case "handyman":
-                iconUrl = "/handyman.png";
-                break;
-              case "painter":
-                iconUrl = "/painter.png";
-                break;
-              case "food_truck":
-                iconUrl = "/truck.png";
-                break;
-              default:
-                iconUrl = "/default.png";
-            }
-            createMarker(service, slot, iconUrl);
+            // Create a location object from the schedule slot
+            const locationObj = {
+              lat: slot.lat,
+              lng: slot.lng,
+              address: slot.address
+            };
+            createMarker(service, locationObj, iconUrl);
           } else {
             console.warn(`Skipping invalid marker for ${service.name}`, slot);
           }
         });
+      } else {
+        console.warn(`Service ${service.name} has neither location nor schedule data`);
       }
     });
     setMarkers(newMarkers);
@@ -355,10 +396,23 @@ export default function Locator() {
                 </p>
               )}
               {selectedService.trade === "handyman" && (
-                <p className="text-black mb-2">
-                  <strong>Skills & Services:</strong>{" "}
-                  {selectedService.skillsAndServices || "Not specified"}
-                </p>
+                <>
+                  <p className="text-black mb-2">
+                    <strong>Skills & Services:</strong>{" "}
+                    {selectedService.skillsAndServices || "Not specified"}
+                  </p>
+                  
+                  {/* Payment button for handyman services */}
+                  {session && selectedService._id && (
+                    <div className="mt-4">
+                      <h3 className="text-lg font-semibold text-black mb-2">Book This Handyman</h3>
+                      <PayNowButton 
+                        serviceId={selectedService._id} 
+                        className="w-full py-3 text-base font-medium"
+                      />
+                    </div>
+                  )}
+                </>
               )}
               {selectedService.trade === "painter" && (
                 <p className="text-black mb-2">
@@ -397,16 +451,34 @@ export default function Locator() {
                     ))}
                 </ul>
               </div>
-              <button
-                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-                onClick={closeModal}
-              >
-                Close
-              </button>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                {selectedService.trade === "handyman" && selectedService._id && !session && (
+                  <Link 
+                    href={`/login?redirect=/payment?service_id=${selectedService._id}`}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-center"
+                  >
+                    Login to Book
+                  </Link>
+                )}
+                <button
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+                  onClick={closeModal}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
       </main>
     </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <SessionProvider>
+      <Locator />
+    </SessionProvider>
   );
 }

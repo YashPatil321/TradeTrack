@@ -31,6 +31,8 @@ const ServiceSchema = new Schema({
   },
   // Associate the service with the user (e.g., by storing their email)
   userEmail: { type: String, required: true },
+  // Stripe Connect account ID for receiving payments (for handyman services)
+  stripeAccountId: { type: String },
 });
 
 export default models.Service || model("Service", ServiceSchema);
