@@ -15,6 +15,19 @@ const ServiceSchema = new Schema({
   skillsAndServices: { type: String }, // handyman
   specialties: { type: String }, // painter
   mainLocation: { type: String, required: true },
+  // GeoJSON location for static services like handyman (used by map)
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: [0, 0],
+    },
+  },
+  // Schedule for mobile services like food trucks
   schedule: [
     {
       day: { type: String, required: true },
@@ -29,6 +42,9 @@ const ServiceSchema = new Schema({
     enum: ["food_truck", "plumber", "electrician", "handyman", "painter"],
     required: true,
   },
+  // Price information for handyman services
+  price: { type: Number },
+  priceType: { type: String }, // hourly, fixed, etc.
   // Associate the service with the user (e.g., by storing their email)
   userEmail: { type: String, required: true },
   // Stripe Connect account ID for receiving payments (for handyman services)
