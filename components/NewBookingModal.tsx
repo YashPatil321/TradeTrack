@@ -86,62 +86,77 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
 
   // Generate time slots when date or service changes
   useEffect(() => {
-    if (!selectedDate || !serviceDetails) return;
+    if (!selectedDate || !serviceDetails) {
+      console.log('Missing required data:', { selectedDate, serviceDetails });
+      return;
+    }
+    
+    // Clear any previously selected time when date or service changes
+    setSelectedTime('');
     
     // Parse service hours (assuming format like "9-5" or "10-6")
     let startHour = 9;
     let endHour = 17; // 5 PM
     
-    if (service.hours) {
-      const hoursParts = service.hours.split('-');
-      if (hoursParts.length === 2) {
-        const start = parseInt(hoursParts[0].trim().split(':')[0]);
-        let end = parseInt(hoursParts[1].trim().split(':')[0]);
-        
-        if (!isNaN(start)) startHour = start;
-        if (!isNaN(end)) endHour = end;
+    // Default hours if none are specified
+    if (!service.hours) {
+      console.log('No hours specified, using default 9-5');
+    } else {
+      try {
+        const hoursParts = service.hours.split('-');
+        if (hoursParts.length === 2) {
+          const start = parseInt(hoursParts[0].trim().split(':')[0]);
+          const end = parseInt(hoursParts[1].trim().split(':')[0]);
+          
+          if (!isNaN(start)) startHour = start;
+          if (!isNaN(end)) endHour = end;
+          
+          console.log(`Parsed hours from ${service.hours}: ${startHour}-${endHour}`);
+        }
+      } catch (err) {
+        console.log('Error parsing hours:', err);
       }
+    }
+    
+    // Basic validation to ensure we have a valid time range
+    if (startHour >= endHour) {
+      console.log('Invalid hours range, resetting to default');
+      startHour = 9;
+      endHour = 17;
     }
     
     // Generate time slots based on service duration
     const times = [];
-    const durationHours = serviceDetails.durationHours;
     
-    // For each possible start time, check if the service can be completed before closing
-    for (let i = startHour; i <= endHour - durationHours; i += 0.5) {
-      // Format the time (handle half hours)
-      const isHalfHour = i % 1 !== 0;
-      const hour = Math.floor(i);
-      const minutes = isHalfHour ? "30" : "00";
+    // Ensure duration is valid (default to 1 hour if not)
+    const durationHours = serviceDetails.durationHours > 0 ? serviceDetails.durationHours : 1;
+    
+    console.log('Generating time slots with duration:', durationHours, 'hours');
+    console.log(`Available window: ${startHour} to ${endHour}`);
+    
+    // Generate fixed time slots regardless of duration to ensure we always have options
+    for (let hour = startHour; hour < endHour; hour++) {
+      // Create an hourly slot
+      const amPm = hour < 12 ? 'AM' : 'PM';
+      const displayHour = hour <= 12 ? hour : hour - 12;
+      const slotTime = `${displayHour}:00 ${amPm}`;
+      times.push(slotTime);
       
-      let formattedTime;
-      if (hour < 12) {
-        formattedTime = `${hour}:${minutes} AM`;
-      } else if (hour === 12) {
-        formattedTime = `12:${minutes} PM`;
-      } else {
-        formattedTime = `${hour-12}:${minutes} PM`;
+      // Add half-hour slot if there's room
+      if (hour + 0.5 < endHour) {
+        const halfSlotTime = `${displayHour}:30 ${amPm}`;
+        times.push(halfSlotTime);
       }
-      
-      // Format end time
-      const endTime = i + durationHours;
-      const endHour = Math.floor(endTime);
-      const endMinutes = endTime % 1 !== 0 ? "30" : "00";
-      
-      let formattedEndTime;
-      if (endHour < 12) {
-        formattedEndTime = `${endHour}:${endMinutes} AM`;
-      } else if (endHour === 12) {
-        formattedEndTime = `12:${endMinutes} PM`;
-      } else {
-        formattedEndTime = `${endHour-12}:${endMinutes} PM`;
-      }
-      
-      times.push(`${formattedTime} - ${formattedEndTime}`);
+    }
+    
+    console.log('Generated time slots:', times);
+    if (times.length === 0) {
+      console.warn('No time slots were generated! Adding default slots.');
+      times.push('9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM');
     }
     
     setAvailableTimes(times);
-  }, [selectedDate, serviceDetails, service.hours]);
+  }, [selectedDate, serviceDetails, service?.hours]);
 
   if (!isOpen) return null;
 
@@ -154,15 +169,21 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
   };
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    console.log('Time selected:', e.target.value);
     setSelectedTime(e.target.value);
   };
 
   const handleProceedToPayment = () => {
-    if (!selectedService || !selectedDate || !selectedTime || !serviceDetails) return;
+    console.log('Payment proceeding with:', { selectedService, selectedDate, selectedTime });
+    if (!selectedService || !selectedDate || !selectedTime || !serviceDetails) {
+      alert('Please make sure you have selected a service, date, and time slot.');
+      return;
+    }
+    
     setLoading(true);
     
     // Redirect to payment page with all necessary details
-    router.push(`/payment?service=${encodeURIComponent(selectedService)}&date=${encodeURIComponent(selectedDate)}&time=${encodeURIComponent(selectedTime)}&estimatedTime=${encodeURIComponent(serviceDetails.estimatedTime)}&price=${serviceDetails.price}&serviceId=${encodeURIComponent(service._id || '')}`);
+    window.location.href = `/payment?service=${encodeURIComponent(selectedService)}&date=${encodeURIComponent(selectedDate)}&time=${encodeURIComponent(selectedTime)}&estimatedTime=${encodeURIComponent(serviceDetails.estimatedTime)}&price=${serviceDetails.price}&serviceId=${encodeURIComponent(service._id || '')}`;
   };
 
   return (
@@ -183,9 +204,10 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
         <div className="mb-4">
           <label className="block mb-2 font-semibold text-gray-900">Select Service</label>
           <select 
+            id="service-select"
             value={selectedService}
             onChange={handleServiceChange}
-            className="w-full p-2 border border-gray-300 rounded cursor-pointer"
+            className="w-full p-2 border border-gray-300 rounded cursor-pointer bg-white text-gray-900 font-medium"
           >
             <option value="">Choose a service...</option>
             {services.map((service, index) => (
@@ -208,9 +230,10 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
         <div className="mb-4">
           <label className="block mb-2 font-semibold text-gray-900">Select Date</label>
           <select 
+            id="date-select"
             value={selectedDate}
             onChange={handleDateChange}
-            className="w-full p-2 border border-gray-300 rounded cursor-pointer"
+            className="w-full p-2 border border-gray-300 rounded cursor-pointer bg-white text-gray-900 font-medium"
           >
             <option value="">Choose a date...</option>
             {availableDates.map((date, index) => (
@@ -222,15 +245,16 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
         {/* Time Selection */}
         {selectedDate && (
           <div className="mb-4">
-            <label className="block mb-2 font-semibold text-gray-900">Select Time</label>
+            <label htmlFor="time-select" className="block mb-2 font-semibold text-gray-900">Select Time</label>
             <select 
+              id="time-select"
               value={selectedTime}
               onChange={handleTimeChange}
-              className="w-full p-2 border border-gray-300 rounded cursor-pointer text-gray-900 font-medium"
+              className="w-full p-2 border border-gray-300 rounded cursor-pointer bg-white text-gray-900 font-medium"
             >
-              <option value="">Choose a time...</option>
+              <option value="" className="text-gray-900">Choose a time...</option>
               {availableTimes.map((time, index) => (
-                <option key={index} value={time}>{time}</option>
+                <option key={index} value={time} className="text-gray-900">{time}</option>
               ))}
             </select>
           </div>
@@ -244,7 +268,7 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
               e.preventDefault();
               onCloseAction();
             }}
-            className="px-4 py-2 font-bold text-gray-700 bg-gray-200 rounded hover:bg-gray-300 cursor-pointer"
+            className="px-4 py-2 font-bold text-gray-700 bg-gray-200 rounded hover:bg-gray-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
             Cancel
           </a>
@@ -252,11 +276,12 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
             href="#" 
             onClick={(e) => {
               e.preventDefault();
+              console.log('Trying to proceed with:', { selectedService, selectedDate, selectedTime });
               if (selectedService && selectedDate && selectedTime) {
                 handleProceedToPayment();
               }
             }}
-            className={`px-4 py-2 font-bold rounded ${
+            className={`px-4 py-2 font-bold rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
               selectedService && selectedDate && selectedTime
                 ? 'bg-blue-500 text-white hover:bg-blue-600 cursor-pointer'
                 : 'bg-blue-300 text-white cursor-not-allowed'

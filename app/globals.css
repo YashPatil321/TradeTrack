@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fix for select elements and dropdowns */
+select {
+  background-color: white !important;
+  color: #111827 !important; /* text-gray-900 */
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  appearance: auto !important;
+}
+
+select option {
+  background-color: white !important;
+  color: #111827 !important;
+  font-weight: normal !important;
+  padding: 8px !important;
+}
+
+select option:checked,
+select option:hover,
+select option:focus {
+  background-color: #dbeafe !important; /* light blue */
+  color: #111827 !important;
+}
+
 :root {
   --foreground-rgb: 35, 200, 55;
   --background-start-rgb: 250, 237, 200; 
