@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, SessionProvider } from 'next-auth/react';
 import Link from 'next/link';
 
-export default function PaymentConfirmationPage() {
+function PaymentConfirmation() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const serviceId = searchParams.get('service_id');
@@ -148,5 +148,13 @@ export default function PaymentConfirmationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentConfirmationPage() {
+  return (
+    <SessionProvider>
+      <PaymentConfirmation />
+    </SessionProvider>
   );
 }

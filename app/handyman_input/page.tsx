@@ -163,9 +163,18 @@ function HandymanInput() {
       hours,
       skillsAndServices: selectedServices + (skillsAndServices ? `. ${skillsAndServices}` : ""),
       mainLocation: serviceArea,
+      // Add GeoJSON format location for the map
+      location: {
+        type: "Point",
+        coordinates: [mainCoords.lng, mainCoords.lat] // GeoJSON uses [longitude, latitude] order
+      },
+      // Keep schedule for compatibility
       schedule: finalSchedule,
       userEmail: session.user.email, // Associate with logged-in user
       trade: "handyman",
+      // Add price data
+      price: 75, // Default hourly rate
+      priceType: "hourly",
       agreedToPricing: agreeToPricing
     };
 
@@ -285,97 +294,99 @@ function HandymanInput() {
 
         {/* Hours of Operation */}
         <div>
-          <label className="block text-black mb-2">Hours of Operation</label>
+          <label className="block text-black mb-2 font-medium">Hours of Operation</label>
           <input
             type="text"
             value={hours}
             onChange={(e) => setHours(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded text-black"
+            placeholder="9-5"
           />
+          <p className="text-xs text-gray-500 mt-1">Format: 9-5 or 10-6 (this will be used to create available time slots for bookings)</p>
         </div>
 
         {/* Services Offered Checkboxes */}
         <div>
-          <label className="block text-black mb-2">Services Offered</label>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex items-center">
+          <label className="block text-black mb-4 text-xl font-medium">Services Offered</label>
+          <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-2">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.carpentry}
                 onChange={() => handleServiceChange('carpentry')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">Carpentry</span>
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.plumbing}
                 onChange={() => handleServiceChange('plumbing')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">Minor Plumbing</span>
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.electrical}
                 onChange={() => handleServiceChange('electrical')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">Minor Electrical</span>
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.painting}
                 onChange={() => handleServiceChange('painting')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">Painting</span>
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.drywall}
                 onChange={() => handleServiceChange('drywall')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">Drywall Repair</span>
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.flooring}
                 onChange={() => handleServiceChange('flooring')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">Flooring Installation</span>
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.furniture}
                 onChange={() => handleServiceChange('furniture')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">Furniture Assembly</span>
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.outdoor}
                 onChange={() => handleServiceChange('outdoor')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">Outdoor Maintenance</span>
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-lg">
               <input
                 type="checkbox"
                 checked={servicesOffered.general}
                 onChange={() => handleServiceChange('general')}
-                className="mr-2"
+                className="mr-3 h-5 w-5 accent-blue-600"
               />
               <span className="text-black">General Repairs</span>
             </label>

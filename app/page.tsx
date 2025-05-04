@@ -13,6 +13,7 @@ import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import ListYourTradeButton from "../components/ListYourTradeButton";
 import PayNowButton from "../components/PayNowButton";
+import NewBookingModal from "@/components/NewBookingModal";
 
 interface ServiceSchedule {
   day: string;
@@ -48,6 +49,8 @@ interface Service {
   priceType?: string;
   stripeAccountId?: string;
   location?: PointLocation;    // GeoJSON location for handyman/static services
+  estimatedTime?: string;      // Estimated time for service completion
+  phoneNumber?: string;        // Added for contact information
 }
 
 function Locator() {
@@ -56,11 +59,12 @@ function Locator() {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState("");
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
-  // Fetch services from your backend API instead of localStorage.
+  // Fetch services from your backend API
   useEffect(() => {
     async function fetchServices() {
       try {
@@ -78,7 +82,7 @@ function Locator() {
     fetchServices();
   }, []);
 
-  // Load Google Maps script and initialize the map (once)
+  // Load Google Maps script and initialize the map
   useEffect(() => {
     const initMap = () => {
       const mapElement = document.getElementById("map") as HTMLElement;
@@ -106,14 +110,14 @@ function Locator() {
     }
   }, []);
 
-  // Update markers whenever map, services, or selectedTrade changes.
+  // Update markers whenever map, services, or selectedTrade changes
   useEffect(() => {
     if (!map) return;
-    // Clear existing markers.
+    // Clear existing markers
     markers.forEach((marker) => marker.setMap(null));
     const newMarkers: google.maps.Marker[] = [];
 
-    // Helper function: create marker for a service with an icon.
+    // Helper function: create marker for a service with an icon
     const createMarker = (service: Service, location: { lat: number, lng: number, address?: string }, iconUrl: string) => {
       const marker = new window.google.maps.Marker({
         position: { lat: location.lat, lng: location.lng },
@@ -142,9 +146,9 @@ function Locator() {
       newMarkers.push(marker);
     };
 
-    // Loop through each service and add markers.
+    // Loop through each service and add markers
     services.forEach((service) => {
-      // If a trade filter is active, only add markers for matching services.
+      // If a trade filter is active, only add markers for matching services
       if (selectedTrade && service.trade !== selectedTrade) return;
       
       let iconUrl = "";
@@ -210,7 +214,7 @@ function Locator() {
     setMarkers(newMarkers);
   }, [map, services, selectedTrade]);
 
-  // "Search Near Me" functionality: recenter map on user's location.
+  // "Search Near Me" functionality: recenter map on user's location
   const searchNearMe = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -218,51 +222,42 @@ function Locator() {
           const { latitude, longitude } = position.coords;
           if (!map) return;
           map.setCenter({ lat: latitude, lng: longitude });
-          map.setZoom(13);
+          map.setZoom(11);
         },
         (error) => {
-          console.error("Error getting geolocation:", error);
-          alert("Error getting your location.");
+          console.error("Error getting location:", error);
+          alert("Error getting your location. Please try again.");
         }
       );
     } else {
-      alert("Geolocation is not supported by this browser.");
+      alert("Geolocation is not supported by your browser.");
     }
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedService(null);
   };
 
   return (
     <>
-      {/* Fixed Nav Bar */}
-      <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
-        <div className="container mx-auto flex items-center justify-between">
-          <div className="text-xl font-bold">TradeTrack</div>
-          <ul className="flex space-x-4">
-            <li>
-              <Link href="/" legacyBehavior>
-                <a className="hover:text-gray-300">Locator</a>
+      {/* Black Top Bar */}
+      <div className="fixed top-0 left-0 right-0 z-10 bg-black text-white shadow-md">
+        <div className="container mx-auto flex justify-between items-center p-2">
+          <h1 className="text-xl font-bold">TradeTrack</h1>
+          <div className="flex items-center space-x-4">
+            <Link href="/" className="text-white hover:text-gray-300">Locator</Link>
+            <Link href="/about" className="text-white hover:text-gray-300">About</Link>
+            {session ? (
+              <Link href="/profile" className="text-white hover:text-gray-300 text-sm">
+                Welcome, <span className="text-blue-400">{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
               </Link>
-            </li>
-            <li>
-              <Link href="/about" legacyBehavior>
-                <a className="hover:text-gray-300">About</a>
-              </Link>
-            </li>
-            <li>
-              <ListYourTradeButton />
-            </li>
-          </ul>
+            ) : (
+              <Link href="/profile" className="text-white hover:text-gray-300">List Your Service</Link>
+            )}
+          </div>
         </div>
-      </nav>
-
-      {/* Second Menu Bar */}
-      <div className="p-3 w-full mt-16" style={{ backgroundColor: "#f5d9bc" }}>
-        <div className="container mx-auto flex flex-wrap items-center justify-between">
-          <div className="flex flex-wrap gap-2">
+      </div>
+      
+      {/* Filter Buttons */}
+      <div className="fixed top-10 left-0 right-0 z-10 bg-transparent pt-4">
+        <div className="container mx-auto flex flex-wrap justify-between items-center">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setSelectedTrade("")}
               className={`px-4 py-2 rounded text-sm ${
@@ -271,7 +266,7 @@ function Locator() {
                   : "bg-gray-200 text-black hover:bg-gray-300"
               }`}
             >
-              All Trades
+              All
             </button>
             <button
               onClick={() => setSelectedTrade("food_truck")}
@@ -281,7 +276,7 @@ function Locator() {
                   : "bg-gray-200 text-black hover:bg-gray-300"
               }`}
             >
-              Food Truck
+              Food Trucks
             </button>
             <button
               onClick={() => setSelectedTrade("plumber")}
@@ -326,7 +321,7 @@ function Locator() {
           </div>
           <button
             onClick={searchNearMe}
-            className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600"
+            className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 mt-2 sm:mt-0"
           >
             Search Near Me
           </button>
@@ -340,135 +335,120 @@ function Locator() {
       >
         <div id="map" style={{ height: "1200px", width: "120%" }}></div>
 
+        {/* Service Modal */}
         {isModalOpen && selectedService && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-            onClick={closeModal}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40"
+            onClick={() => setIsModalOpen(false)}
           >
             <div
-              className="bg-white p-6 rounded-lg max-w-xl w-full"
+              className="bg-white rounded-lg p-8 max-w-md w-full max-h-[80vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-2xl font-bold mb-4 text-black">
-                {selectedService.name}
-              </h2>
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">{selectedService.name}</h2>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                  type="button"
+                >
+                  ✕
+                </button>
+              </div>
+
               {selectedService.image && (
                 <img
                   src={selectedService.image}
                   alt={selectedService.name}
-                  className="w-full h-auto mb-4"
+                  className="w-full h-48 object-cover rounded-lg mb-4"
                 />
               )}
-              <p className="text-black mb-2">
-                <strong>Description:</strong> {selectedService.description}
-              </p>
-              <p className="text-black mb-2">
-                <strong>Hours:</strong> {selectedService.hours}
-              </p>
-              {selectedService.trade === "food_truck" && (
-                <>
-                  <p className="text-black mb-2">
-                    <strong>Cuisine:</strong> {selectedService.cuisine || "Not specified"}
-                  </p>
-                  <p className="text-black mb-2">
-                    <strong>Dietary Restrictions:</strong>{" "}
-                    {selectedService.restrictions && selectedService.restrictions.length > 0
-                      ? selectedService.restrictions.join(", ")
-                      : "None"}
-                  </p>
-                  <p className="text-black mb-2">
-                    <strong>Meal Times:</strong>{" "}
-                    {selectedService.mealTimes && selectedService.mealTimes.length > 0
-                      ? selectedService.mealTimes.join(", ")
-                      : "Not specified"}
-                  </p>
-                </>
-              )}
-              {selectedService.trade === "plumber" && (
-                <p className="text-black mb-2">
-                  <strong>Certifications:</strong>{" "}
-                  {selectedService.certifications || "Not specified"}
-                </p>
-              )}
-              {selectedService.trade === "electrician" && (
-                <p className="text-black mb-2">
-                  <strong>License:</strong> {selectedService.license || "Not specified"}
-                </p>
-              )}
-              {selectedService.trade === "handyman" && (
-                <>
-                  <p className="text-black mb-2">
-                    <strong>Skills & Services:</strong>{" "}
-                    {selectedService.skillsAndServices || "Not specified"}
-                  </p>
-                  
-                  {/* Payment button for handyman services */}
-                  {session && selectedService._id && (
-                    <div className="mt-4">
-                      <h3 className="text-lg font-semibold text-black mb-2">Book This Handyman</h3>
-                      <PayNowButton 
-                        serviceId={selectedService._id} 
-                        className="w-full py-3 text-base font-medium"
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-              {selectedService.trade === "painter" && (
-                <p className="text-black mb-2">
-                  <strong>Specialties:</strong>{" "}
-                  {selectedService.specialties || "Not specified"}
-                </p>
-              )}
-              <div className="flex flex-col md:flex-row md:space-x-4 mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-black">Main Location</h3>
-                  <p className="text-black">
-                    {selectedService.mainLocation ||
-                      (selectedService.schedule && selectedService.schedule[0]?.address) ||
-                      "Not specified"}
-                  </p>
-                </div>
+
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">Description</h3>
+                <p className="text-gray-900">{selectedService.description}</p>
               </div>
-              <div className="mt-4">
-                <h3 className="text-xl font-bold text-black mb-2">
-                  Weekly Schedule for {selectedService.name} for this week
-                </h3>
-                <ul className="space-y-2">
-                  {selectedService.schedule &&
-                    selectedService.schedule.map((slot, index: number) => (
-                      <li key={index} className="text-black border-b pb-2">
-                        <p>
-                          <strong>Day:</strong> {slot.day}
-                        </p>
-                        <p>
-                          <strong>Time:</strong> {slot.time}
-                        </p>
-                        <p>
-                          <strong>Address:</strong> {slot.address}
-                        </p>
+
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">Details</h3>
+                <ul className="text-gray-900">
+                  <li className="mb-1 text-gray-900">
+                    <strong>Type:</strong> {selectedService.trade.replace("_", " ")}
+                  </li>
+                  <li className="mb-1 text-gray-900">
+                    <strong>Location:</strong> {selectedService.mainLocation}
+                  </li>
+                  <li className="mb-1 text-gray-900">
+                    <strong>Hours:</strong> {selectedService.hours}
+                  </li>
+                  {selectedService.trade === "handyman" && (
+                    <>
+                      <li className="mb-1 text-gray-900">
+                        <strong>Services:</strong> {selectedService.skillsAndServices}
                       </li>
-                    ))}
+                      <li className="mb-1 text-gray-900">
+                        <strong>Estimated Time:</strong> {selectedService.estimatedTime || "1 hour"}
+                      </li>
+                      <li className="mb-1 text-gray-900">
+                        <strong>Price:</strong> ${selectedService.price || 75} {selectedService.priceType || "per hour"}
+                      </li>
+                      <li className="mb-1 text-yellow-600 text-sm italic">
+                        Note: If service takes longer than estimated, additional charges may apply.
+                      </li>
+                    </>
+                  )}
                 </ul>
               </div>
-              <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                {selectedService.trade === "handyman" && selectedService._id && !session && (
-                  <Link 
-                    href={`/login?redirect=/payment?service_id=${selectedService._id}`}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-center"
-                  >
-                    Login to Book
-                  </Link>
+
+              <div className="mt-6 flex justify-center space-x-4">
+                {selectedService.trade === "handyman" ? (
+                  session ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsBookingModalOpen(true);
+                          setIsModalOpen(false);
+                        }}
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition cursor-pointer"
+                        type="button"
+                      >
+                        Book Service
+                      </button>
+                      <PayNowButton
+                        serviceId={selectedService._id || ""}
+                      />
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => router.push("/login")}
+                      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition cursor-pointer"
+                      type="button"
+                    >
+                      Login to Book
+                    </button>
+                  )
+                ) : (
+                  selectedService.trade === "food_truck" && (
+                    <a
+                      href={`tel:${selectedService.phoneNumber || "555-123-4567"}`}
+                      className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+                    >
+                      Call to Order
+                    </a>
+                  )
                 )}
-                <button
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-                  onClick={closeModal}
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
+        )}
+        
+        {/* Booking Modal */}
+        {isBookingModalOpen && selectedService && (
+          <NewBookingModal
+            service={selectedService}
+            isOpen={isBookingModalOpen}
+            onCloseAction={() => setIsBookingModalOpen(false)}
+          />
         )}
       </main>
     </>
