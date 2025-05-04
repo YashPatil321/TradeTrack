@@ -19,6 +19,7 @@ function PaymentPageContent() {
   const serviceTime = searchParams.get('time');
   const estimatedTime = searchParams.get('estimatedTime');
   const priceString = searchParams.get('price');
+  const serviceNotes = searchParams.get('notes');
   
   // State variables
   const [clientSecret, setClientSecret] = useState<string>('');
@@ -26,6 +27,12 @@ function PaymentPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [amount, setAmount] = useState<number>(priceString ? parseFloat(priceString) : 75);
+  const [addressLine1, setAddressLine1] = useState<string>('');
+  const [addressLine2, setAddressLine2] = useState<string>('');
+  const [city, setCity] = useState<string>('');
+  const [state, setState] = useState<string>('');
+  const [zipCode, setZipCode] = useState<string>('');
+  const [addressError, setAddressError] = useState<string>('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -203,6 +210,82 @@ function PaymentPageContent() {
         </div>
       </div>
 
+      {/* Address Form */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Service Address</h2>
+        <p className="text-gray-700 mb-4">Please provide the address where you would like the service to be performed:</p>
+        
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="address-line1" className="block text-sm font-medium text-gray-900 mb-1">Address Line 1*</label>
+            <input
+              type="text"
+              id="address-line1"
+              value={addressLine1}
+              onChange={(e) => setAddressLine1(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Street address"
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="address-line2" className="block text-sm font-medium text-gray-900 mb-1">Address Line 2</label>
+            <input
+              type="text"
+              id="address-line2"
+              value={addressLine2}
+              onChange={(e) => setAddressLine2(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Apartment, suite, unit, building, floor, etc."
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="city" className="block text-sm font-medium text-gray-900 mb-1">City*</label>
+              <input
+                type="text"
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                placeholder="City"
+                required
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="state" className="block text-sm font-medium text-gray-900 mb-1">State/Province*</label>
+              <input
+                type="text"
+                id="state"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                placeholder="State"
+                required
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="zipcode" className="block text-sm font-medium text-gray-900 mb-1">ZIP/Postal Code*</label>
+              <input
+                type="text"
+                id="zipcode"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                placeholder="ZIP/Postal code"
+                required
+              />
+            </div>
+          </div>
+          
+          {addressError && <p className="text-red-500 text-sm">{addressError}</p>}
+        </div>
+      </div>
+
       {clientSecret ? (
         <StripeProvider options={{ clientSecret }}>
           <CheckoutForm 
@@ -210,6 +293,22 @@ function PaymentPageContent() {
             serviceName={service.name} 
             amount={amount}
             description={`Payment for handyman service: ${service.name}`}
+            addressInfo={{
+              addressLine1,
+              addressLine2,
+              city,
+              state,
+              zipCode,
+              serviceNotes: serviceNotes || ''
+            }}
+            validateAddress={() => {
+              if (!addressLine1 || !city || !state || !zipCode) {
+                setAddressError('Please fill in all required address fields');
+                return false;
+              }
+              setAddressError('');
+              return true;
+            }}
           />
         </StripeProvider>
       ) : (
