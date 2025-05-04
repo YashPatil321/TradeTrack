@@ -28,6 +28,7 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [services, setServices] = useState<string[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
 
   // Initialize data on component mount
   useEffect(() => {
@@ -83,6 +84,22 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
       price
     });
   }, [selectedService, service.price]);
+
+  // Fetch booked slots when date or service changes
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      if (service?._id && selectedDate) {
+        try {
+          const res = await fetch(`/api/bookings/booked?serviceId=${service._id}&date=${encodeURIComponent(selectedDate)}`);
+          const data = await res.json();
+          if (data.success) setBookedSlots(data.bookedSlots);
+        } catch (err) {
+          console.error('Error fetching booked slots:', err);
+        }
+      }
+    };
+    fetchBookedSlots();
+  }, [selectedDate, service?._id]);
 
   // Generate time slots when date or service changes
   useEffect(() => {
@@ -158,6 +175,11 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
     setAvailableTimes(times);
   }, [selectedDate, serviceDetails, service?.hours]);
 
+  // Filter available times to exclude booked slots
+  const availableSlots = availableTimes.filter(time => 
+    !bookedSlots.includes(time)
+  );
+
   if (!isOpen) return null;
 
   const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -174,7 +196,7 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
   };
 
   const handleProceedToPayment = () => {
-    console.log('Payment proceeding with:', { selectedService, selectedDate, selectedTime });
+    console.log('Payment proceeding with:', { selectedService, selectedDate, selectedTime, serviceDetails });
     if (!selectedService || !selectedDate || !selectedTime || !serviceDetails) {
       alert('Please make sure you have selected a service, date, and time slot.');
       return;
@@ -253,7 +275,7 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
               className="w-full p-2 border border-gray-300 rounded cursor-pointer bg-white text-gray-900 font-medium"
             >
               <option value="" className="text-gray-900">Choose a time...</option>
-              {availableTimes.map((time, index) => (
+              {availableSlots.map((time, index) => (
                 <option key={index} value={time} className="text-gray-900">{time}</option>
               ))}
             </select>

@@ -12,7 +12,6 @@ import { useRouter } from "next/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import ListYourTradeButton from "../components/ListYourTradeButton";
-import PayNowButton from "../components/PayNowButton";
 import NewBookingModal from "@/components/NewBookingModal";
 
 interface ServiceSchedule {
@@ -414,9 +413,6 @@ function Locator() {
                       >
                         Book Service
                       </button>
-                      <PayNowButton
-                        serviceId={selectedService._id || ""}
-                      />
                     </>
                   ) : (
                     <button

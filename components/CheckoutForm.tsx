@@ -9,16 +9,29 @@ import {
 } from '@stripe/react-stripe-js';
 import { useRouter } from 'next/navigation';
 
+export interface AddressInfo {
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  serviceNotes?: string;
+}
+
 export default function CheckoutForm({ 
   serviceId, 
   serviceName,
   amount,
-  description 
+  description,
+  addressInfo,
+  validateAddress
 }: { 
   serviceId: string;
   serviceName: string;
   amount: number;
   description: string;
+  addressInfo: AddressInfo;
+  validateAddress: () => boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -70,23 +83,68 @@ export default function CheckoutForm({
       // Stripe.js hasn't yet loaded.
       return;
     }
+    
+    // First validate the service address
+    if (!validateAddress()) {
+      return;
+    }
 
     setIsLoading(true);
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        // Redirect to the confirmation page after payment
-        return_url: `${window.location.origin}/payment-confirmation?service_id=${serviceId}`,
-        receipt_email: email,
-      },
-    });
-
-    // This will only execute if there's an immediate error when confirming the payment
-    if (error.type === "card_error" || error.type === "validation_error") {
-      setMessage(error.message || "An unexpected error occurred");
-    } else {
-      setMessage("An unexpected error occurred");
+    
+    try {
+      // Create a booking record first to store all details
+      const bookingResponse = await fetch('/api/bookings/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId,
+          serviceName,
+          amount,
+          email,
+          description,
+          address: addressInfo,
+        }),
+      });
+      
+      const bookingData = await bookingResponse.json();
+      
+      if (!bookingData.success) {
+        throw new Error(bookingData.error || 'Failed to create booking');
+      }
+      
+      const bookingId = bookingData.bookingId;
+      
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          // Redirect to the confirmation page after payment
+          return_url: `${window.location.origin}/payment-confirmation?service_id=${serviceId}&booking_id=${bookingId}`,
+          receipt_email: email,
+          payment_method_data: {
+            billing_details: {
+              email: email,
+            },
+          },
+          metadata: {
+            booking_id: bookingId,
+            service_id: serviceId,
+          },
+        },
+      });
+      
+      // This will only execute if there's an immediate error when confirming the payment
+      if (error) {
+        if (error.type === "card_error" || error.type === "validation_error") {
+          setMessage(error.message || "An unexpected error occurred");
+        } else {
+          setMessage("An unexpected error occurred");
+        }
+      }
+    } catch (err: any) {
+      console.error('Payment error:', err);
+      setMessage(err.message || "An unexpected error occurred");
     }
 
     setIsLoading(false);
@@ -131,6 +189,22 @@ export default function CheckoutForm({
           Billing address
         </label>
         <AddressElement options={{ mode: 'billing' }} />
+      </div>
+      
+      <div className="mb-6 p-4 border border-gray-200 rounded-md bg-gray-50">
+        <h3 className="text-lg font-medium mb-2 text-gray-800">Service Address</h3>
+        <div className="text-sm text-gray-800">
+          <p>{addressInfo.addressLine1}</p>
+          {addressInfo.addressLine2 && <p>{addressInfo.addressLine2}</p>}
+          <p>{addressInfo.city}, {addressInfo.state} {addressInfo.zipCode}</p>
+        </div>
+        
+        {addressInfo.serviceNotes && (
+          <div className="mt-3">
+            <h4 className="text-md font-medium mb-1 text-gray-800">Additional Notes</h4>
+            <p className="text-sm text-gray-700">{addressInfo.serviceNotes}</p>
+          </div>
+        )}
       </div>
       
       <button
