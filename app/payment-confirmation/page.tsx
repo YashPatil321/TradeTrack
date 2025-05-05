@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession, SessionProvider } from 'next-auth/react';
 import Link from 'next/link';
 
-function PaymentConfirmation() {
+function PaymentConfirmationContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   // Get parameters from the URL
@@ -167,7 +167,13 @@ function PaymentConfirmation() {
 export default function PaymentConfirmationPage() {
   return (
     <SessionProvider>
-      <PaymentConfirmation />
+      <Suspense fallback={
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      }>
+        <PaymentConfirmationContent />
+      </Suspense>
     </SessionProvider>
   );
 }
