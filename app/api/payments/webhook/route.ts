@@ -12,20 +12,24 @@ export const bodyParser = false;
 
 // Helper function to create a buffer from the request stream
 async function buffer(req: NextRequest) {
-  const chunks: Buffer[] = [];
+  const chunks: Uint8Array[] = [];
   const reader = req.body?.getReader();
-  if (!reader) return Buffer.from([]);
+  if (!reader) return new Uint8Array();
   
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      chunks.push(Buffer.from(value));
+      chunks.push(new Uint8Array(value));
     }
-    return Buffer.concat(chunks);
+    return new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0))
+      .set(chunks.reduce((acc, chunk, index, array) => {
+        acc.set(chunk, index === 0 ? 0 : array[index - 1].length);
+        return acc;
+      }, new Uint8Array()));
   } catch (error) {
     console.error("Error reading request body:", error);
-    return Buffer.from([]);
+    return new Uint8Array();
   }
 }
 
@@ -40,115 +44,93 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const sig = headers().get('stripe-signature');
+  if (!sig) {
+    return NextResponse.json(
+      { error: 'Missing Stripe signature' },
+      { status: 400 }
+    );
+  }
+
   try {
-    // Get the signature from headers
-    const headersList = headers();
-    const signature = headersList.get("stripe-signature");
-    
-    if (!signature) {
+    const body = await buffer(req);
+    if (!body) {
       return NextResponse.json(
-        { error: "No signature found" },
+        { error: 'Empty request body' },
         { status: 400 }
       );
     }
 
-    // Get the raw body
-    const rawBody = await buffer(req);
-    
-    // Verify and construct the event
     const event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
+      new TextDecoder().decode(body),
+      sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
 
-    // Handle different event types
+    // Handle the event
     switch (event.type) {
-      case "payment_intent.succeeded":
-        await handleSuccessfulPayment(event.data.object);
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+        await handlePaymentSuccess(paymentIntent);
         break;
-      case "payment_intent.payment_failed":
-        await handleFailedPayment(event.data.object);
+      case 'payment_intent.payment_failed':
+        const failedPaymentIntent = event.data.object;
+        await handlePaymentFailure(failedPaymentIntent);
         break;
-      // Add other event types as needed
+      default:
+        console.log(`Unhandled event type ${event.type}`);
     }
 
-    return NextResponse.json({ received: true }, { status: 200 });
-  } catch (error: any) {
-    console.error("Webhook error:", error.message);
+    return NextResponse.json({ received: true });
+  } catch (err) {
+    console.error('Webhook Error:', err);
     return NextResponse.json(
-      { error: `Webhook error: ${error.message}` },
+      { error: 'Webhook Error' },
       { status: 400 }
     );
   }
 }
 
-// Handler for successful payments
-async function handleSuccessfulPayment(paymentIntent: any) {
-  // Extract metadata
-  const { serviceId, customerEmail, handymanEmail } = paymentIntent.metadata;
-  
+async function handlePaymentSuccess(paymentIntent: any) {
   try {
-    // Record the transaction in the database
-    await Transaction.create({
-      amount: paymentIntent.amount / 100, // Convert back from cents
-      currency: paymentIntent.currency,
-      status: 'completed',
-      paymentIntentId: paymentIntent.id,
-      serviceId,
-      customerEmail,
-      handymanEmail,
-      description: paymentIntent.description,
-      metadata: {
-        paymentMethod: paymentIntent.payment_method_types[0],
-        receiptUrl: paymentIntent.charges?.data[0]?.receipt_url
-      }
+    const transaction = await Transaction.findOne({
+      paymentIntentId: paymentIntent.id
     });
-    
-    // Here you could also:
-    // 1. Send confirmation emails to both customer and handyman
-    // 2. Update any booking or appointment status
-    
-    console.log(`Payment for service ${serviceId} successful:`, {
-      amount: paymentIntent.amount / 100,
-      customerEmail,
-      handymanEmail,
-      paymentId: paymentIntent.id,
-    });
+
+    if (!transaction) {
+      console.error('Transaction not found for payment intent:', paymentIntent.id);
+      return;
+    }
+
+    transaction.status = 'completed';
+    transaction.paymentId = paymentIntent.id;
+    transaction.paymentStatus = paymentIntent.status;
+    await transaction.save();
+
+    console.log('Payment succeeded:', paymentIntent.id);
   } catch (error) {
-    console.error('Error recording successful payment:', error);
+    console.error('Error handling payment success:', error);
   }
 }
 
-// Handler for failed payments
-async function handleFailedPayment(paymentIntent: any) {
-  // Extract metadata
-  const { serviceId, customerEmail, handymanEmail } = paymentIntent.metadata;
-  
+async function handlePaymentFailure(paymentIntent: any) {
   try {
-    // Record the failed transaction
-    await Transaction.create({
-      amount: paymentIntent.amount / 100,
-      currency: paymentIntent.currency,
-      status: 'failed',
-      paymentIntentId: paymentIntent.id,
-      serviceId,
-      customerEmail,
-      handymanEmail,
-      description: paymentIntent.description,
-      metadata: {
-        errorMessage: paymentIntent.last_payment_error?.message || "Unknown error"
-      }
+    const transaction = await Transaction.findOne({
+      paymentIntentId: paymentIntent.id
     });
-    
-    console.log(`Payment for service ${serviceId} failed:`, {
-      customerEmail,
-      paymentId: paymentIntent.id,
-      errorMessage: paymentIntent.last_payment_error?.message || "Unknown error",
-    });
-    
-    // Here you could notify the customer about the failed payment
+
+    if (!transaction) {
+      console.error('Transaction not found for payment intent:', paymentIntent.id);
+      return;
+    }
+
+    transaction.status = 'failed';
+    transaction.paymentId = paymentIntent.id;
+    transaction.paymentStatus = paymentIntent.status;
+    await transaction.save();
+
+    console.log('Payment failed:', paymentIntent.id);
   } catch (error) {
-    console.error('Error recording failed payment:', error);
+    console.error('Error handling payment failure:', error);
   }
 }

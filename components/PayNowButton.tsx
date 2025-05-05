@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface PayNowButtonProps {
@@ -27,42 +27,90 @@ interface ServiceDetails {
   }>;
 }
 
-export default function PayNowButton({ serviceId, className = '' }: PayNowButtonProps) {
+interface ServiceOption {
+  id: string;
+  name: string;
+  rate: number;
+  timeLimit: string;
+  description: string;
+  materials?: Array<{
+    name: string;
+    price: number;
+  }>;
+  category: string;
+}
+
+export default function PayNowButton({ serviceId, className = '' }: PayNowButtonProps): JSX.Element {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
-  const [selectedService, setSelectedService] = useState('');
-  const [selectedMaterial, setSelectedMaterial] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
-  const [notes, setNotes] = useState('');
+  const [selectedService, setSelectedService] = useState<string>('');
+  const [selectedMaterial, setSelectedMaterial] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
   const [serviceDetails, setServiceDetails] = useState<ServiceDetails | null>(null);
+  const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
+  const [materialOptions, setMaterialOptions] = useState<Array<{ name: string; price: number }>>([]);
+  const [serviceRate, setServiceRate] = useState<number>(0);
+  const [materialPrice, setMaterialPrice] = useState<number>(0);
+  const [materialName, setMaterialName] = useState<string>('');
+  const [totalAmount, setTotalAmount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [serviceOptions, setServiceOptions] = useState<any[]>([]);
-  const [materialOptions, setMaterialOptions] = useState<any[]>([]);
-  const [totalAmount, setTotalAmount] = useState(0);
-  const [serviceRate, setServiceRate] = useState(0);
-  const [materialPrice, setMaterialPrice] = useState(0);
-  const [materialName, setMaterialName] = useState('');
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [bookedTimeSlots, setBookedTimeSlots] = useState<string[]>([]);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [notes, setNotes] = useState<string>('');
 
-  // All possible time slots
-  const allTimeSlots = [
-    '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', 
-    '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
-  ];
-
-  // Fetch service details when modal opens
-  useEffect(() => {
-    if (showModal) {
-      fetchServiceDetails();
-      // Reset date and time selections when opening modal
-      setSelectedDate('');
-      setSelectedTime('');
-      setAvailableTimeSlots([]);
+  // Fetch service details from API
+  const fetchServiceDetails = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/services/${serviceId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch service details');
+      }
+      const data = await response.json();
+      setServiceDetails(data);
+      
+      if (data.services && data.services.length > 0) {
+        const firstService = data.services[0];
+        setServiceOptions(data.services.map((s: any) => ({ 
+          id: s.service, 
+          name: s.service,
+          rate: s.rate,
+          timeLimit: s.timeLimit,
+          description: s.description,
+          materials: s.materials
+        })));
+        setSelectedService(firstService.service);
+        setServiceRate(firstService.rate);
+        
+        if (firstService.materials) {
+          setMaterialOptions(firstService.materials);
+          setSelectedMaterial(firstService.materials[0].name);
+          setMaterialPrice(firstService.materials[0].price);
+          setMaterialName(firstService.materials[0].name);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching service details:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [showModal]);
-  
+  }, [serviceId]);
+
+  // Fetch booked time slots for a specific date
+  const fetchBookedTimeSlots = useCallback(async (date: string) => {
+    try {
+      const response = await fetch(`/api/bookings/booked-time-slots?date=${date}&serviceId=${serviceId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch booked time slots');
+      }
+      const data = await response.json();
+      setAvailableTimeSlots(data.availableTimeSlots);
+    } catch (error) {
+      console.error('Error fetching booked time slots:', error);
+    }
+  }, [serviceId]);
+
   // Fetch booked time slots when a date is selected
   useEffect(() => {
     if (selectedDate && serviceId) {
@@ -73,338 +121,223 @@ export default function PayNowButton({ serviceId, className = '' }: PayNowButton
   // Calculate total amount when service or material changes
   useEffect(() => {
     setTotalAmount(serviceRate + materialPrice);
-  }, [serviceRate, materialPrice, fetchServiceDetails]);
+  }, [serviceRate, materialPrice]);
 
-  // Fetch booked time slots for a specific date
-  const fetchBookedTimeSlots = async (date: string) => {
-    try {
-      // Fetch bookings for this service on the selected date
-      const response = await fetch(`/api/services/${serviceId}/bookings?date=${date}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        // Extract booked time slots
-        const booked = data.bookings.map((booking: any) => booking.time);
-        setBookedTimeSlots(booked);
-        
-        // Filter out booked time slots
-        const available = allTimeSlots.filter(time => !booked.includes(time));
-        setAvailableTimeSlots(available);
-        
-        // If the currently selected time is now booked, reset it
-        if (booked.includes(selectedTime)) {
-          setSelectedTime('');
-        }
-      } else {
-        // If error or no bookings found, all slots are available
-        setBookedTimeSlots([]);
-        setAvailableTimeSlots([...allTimeSlots]);
-      }
-    } catch (error) {
-      console.error('Error fetching booked time slots:', error);
-      // On error, assume all slots are available
-      setBookedTimeSlots([]);
-      setAvailableTimeSlots([...allTimeSlots]);
+  // If the currently selected time is now booked, reset it
+  useEffect(() => {
+    if (bookedTimeSlots.includes(selectedTime)) {
+      setSelectedTime('');
     }
-  };
-  
-  // Fetch service details from API
-  const fetchServiceDetails = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/services/${serviceId}`);
-      const data = await response.json();
-      
-      if (data.success && data.data) {
-        setServiceDetails(data.data);
-        
-        // Create service options from the service details
-        if (data.data.services && data.data.services.length > 0) {
-          const options = data.data.services.map((service: any) => ({
-            id: service.service,
-            name: service.service,
-            rate: service.rate,
-            timeLimit: service.timeLimit,
-            description: service.description,
-            materials: service.materials || [],
-            category: service.category
-          }));
-          
-          setServiceOptions(options);
-        }
+  }, [bookedTimeSlots, selectedTime]);
+
+  // Fetch service details when component mounts
+  useEffect(() => {
+    fetchServiceDetails();
+  }, [fetchServiceDetails]);
+
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const modal = document.getElementById('booking-modal');
+      if (modal && !modal.contains(event.target as Node)) {
+        setShowModal(false);
       }
-    } catch (error) {
-      console.error('Error fetching service details:', error);
-    } finally {
-      setLoading(false);
+    };
+
+    if (showModal) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
-  };
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showModal]);
 
   // Handle service selection change
-  const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const serviceId = e.target.value;
-    setSelectedService(serviceId);
-    
-    // Find the selected service
-    const service = serviceOptions.find(s => s.id === serviceId);
+  const handleServiceChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = e.target.value;
+    const service = serviceOptions.find(s => s.id === selected);
     if (service) {
+      setSelectedService(selected);
       setServiceRate(service.rate);
       
-      // Update material options based on selected service
-      if (service.materials && service.materials.length > 0) {
+      if (service.materials) {
         setMaterialOptions(service.materials);
-      } else {
-        setMaterialOptions([]);
+        setSelectedMaterial(service.materials[0].name);
+        setMaterialPrice(service.materials[0].price);
+        setMaterialName(service.materials[0].name);
       }
-      
-      // Reset material selection
-      setSelectedMaterial('');
-      setMaterialPrice(0);
-      setMaterialName('');
     }
-  };
+  }, [serviceOptions]);
 
   // Handle material selection change
-  const handleMaterialChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const materialId = e.target.value;
-    setSelectedMaterial(materialId);
-    
-    if (materialId === '') {
-      setMaterialPrice(0);
-      setMaterialName('');
-      return;
-    }
-    
-    // Find the selected material
-    const material = materialOptions.find(m => m.name === materialId);
+  const handleMaterialChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const material = materialOptions.find(m => m.name === e.target.value);
     if (material) {
+      setSelectedMaterial(e.target.value);
       setMaterialPrice(material.price);
       setMaterialName(material.name);
     }
-  };
+  }, [materialOptions]);
 
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!selectedService || !selectedDate || !selectedTime) {
+      alert('Please fill in all required fields');
       return;
     }
-    
-    // Find the selected service details
-    const service = serviceOptions.find(s => s.id === selectedService);
-    if (!service) return;
-    
-    // Calculate total amount
-    const amount = serviceRate + materialPrice;
-    
-    // Prepare payment data
-    const paymentData = {
-      serviceId,
-      serviceName: service.name,
-      amount,
-      selectedService,
-      selectedMaterial,
-      date: selectedDate,
-      time: selectedTime,
-      additionalInstructions: notes, // Store the additional instructions
-      serviceNotes: notes, // Also include as serviceNotes for the API
-    };
-    
-    // Store payment details in localStorage for later use
-    localStorage.setItem('pendingBooking', JSON.stringify(paymentData));
-    
-    // Navigate to payment page
-    router.push(`/payment?service=${serviceId}`);
-  };
+
+    try {
+      const response = await fetch('/api/bookings/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId,
+          selectedService,
+          selectedMaterial,
+          selectedDate,
+          selectedTime,
+          notes,
+          totalAmount: serviceRate + materialPrice
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        router.push(`/payment-confirmation?bookingId=${data.bookingId}`);
+      } else {
+        alert(data.message || 'Failed to create booking');
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      alert('Failed to create booking. Please try again.');
+    }
+  }, [serviceId, selectedService, selectedMaterial, selectedDate, selectedTime, notes, serviceRate, materialPrice, router]);
 
   // Get tomorrow's date as the default minimum date for booking
-  const getTomorrowDate = () => {
+  const getTomorrowDate = useCallback(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
-  };
+  }, []);
 
   return (
-    <>
+    <div className="relative">
       <button
         onClick={() => setShowModal(true)}
-        className={`bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors ${className}`}
+        className={`px-6 py-3 rounded-md font-medium transition-colors ${className}`}
       >
-        Book Now
+        {loading ? 'Loading...' : 'Book Now'}
       </button>
-      
-      {/* Booking Modal */}
+
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-            <div className="bg-blue-600 text-white px-6 py-4">
-              <h3 className="text-xl font-bold">Book Service</h3>
-              <p className="text-blue-100">Complete your booking details</p>
-            </div>
-            
-            {loading ? (
-              <div className="p-6 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-                <p className="mt-2 text-gray-700">Loading service details...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="p-6">
-                <div className="space-y-4">
-                  {/* Service Selection */}
-                  <div>
-                    <label htmlFor="service" className="block text-sm font-medium text-gray-700 mb-1">Select Service*</label>
-                    <div className="relative">
-                      <select
-                        id="service"
-                        value={selectedService}
-                        onChange={handleServiceChange}
-                        className="block w-full p-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
-                        required
-                      >
-                        <option value="">-- Select a service --</option>
-                        {serviceOptions.map(service => (
-                          <option key={service.id} value={service.id}>
-                            {service.name} - ${service.rate} ({service.timeLimit})
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </div>
-                    {selectedService && serviceOptions.find(s => s.id === selectedService)?.description && (
-                      <p className="mt-1 text-sm text-gray-500">{serviceOptions.find(s => s.id === selectedService)?.description}</p>
-                    )}
-                  </div>
-                  
-                  {/* Materials Selection - only shown if the selected service has materials */}
-                  {materialOptions.length > 0 && (
-                    <div>
-                      <label htmlFor="material" className="block text-sm font-medium text-gray-700 mb-1">Select Materials</label>
-                      <div className="relative">
-                        <select
-                          id="material"
-                          value={selectedMaterial}
-                          onChange={handleMaterialChange}
-                          className="block w-full p-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
-                        >
-                          <option value="">No materials needed</option>
-                          {materialOptions.map(material => (
-                            <option key={material.name} value={material.name}>
-                              {material.name} - ${material.price}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Date and Time Selection */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Select Date*</label>
-                      <input
-                        type="date"
-                        id="date"
-                        min={getTomorrowDate()}
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">Select Time*</label>
-                      <div className="relative">
-                        <select
-                          id="time"
-                          value={selectedTime}
-                          onChange={(e) => setSelectedTime(e.target.value)}
-                          className="block w-full p-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
-                          required
-                        >
-                          <option value="">-- Select a time --</option>
-                          {availableTimeSlots.map((time: string) => (
-                            <option key={time} value={time}>{time}</option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Notes */}
-                  <div>
-                    <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
-                    <textarea
-                      id="notes"
-                      rows={3}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Specify any special requirements or additional information"
-                    ></textarea>
-                  </div>
-                  
-                  {/* Price Summary */}
-                  {selectedService && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                      <h4 className="font-medium text-gray-900 mb-2">Price Summary</h4>
-                      <div className="space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Service Fee:</span>
-                          <span className="text-gray-900">${serviceRate.toFixed(2)}</span>
-                        </div>
-                        
-                        {selectedMaterial && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Materials ({materialName}):</span>
-                            <span className="text-gray-900">${materialPrice.toFixed(2)}</span>
-                          </div>
-                        )}
-                        
-                        <div className="flex justify-between font-bold pt-2 border-t border-gray-200 mt-2">
-                          <span>Total:</span>
-                          <span>${totalAmount.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          id="booking-modal"
+        >
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-4">Book Service</h2>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Service</label>
+                  <select
+                    value={selectedService}
+                    onChange={handleServiceChange}
+                    required
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="">Select a service</option>
+                    {serviceOptions.map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                
-                <div className="mt-6 flex justify-end space-x-3">
+
+                {materialOptions.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Material</label>
+                    <select
+                      value={selectedMaterial}
+                      onChange={handleMaterialChange}
+                      required
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="">Select a material</option>
+                      {materialOptions.map((material) => (
+                        <option key={material.name} value={material.name}>
+                          {material.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    min={getTomorrowDate()}
+                    required
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Time</label>
+                  <select
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    required
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="">Select a time</option>
+                    {availableTimeSlots.map((time: string) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Notes</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 border border-transparent rounded-md font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
-                    Proceed to Payment
+                    Confirm Booking
                   </button>
                 </div>
-              </form>
-            )}
+              </div>
+            </form>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
