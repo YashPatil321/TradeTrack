@@ -31,24 +31,36 @@ async function dbConnect() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
+      connectTimeoutMS: 30000,
       retryWrites: true,
       retryReads: true,
       maxPoolSize: 10,
       minPoolSize: 5,
       maxIdleTimeMS: 60000,
       family: 4,
+      ssl: true,
+      tls: true,
+      tlsAllowInvalidCertificates: false,
+      tlsAllowInvalidHostnames: false,
+      directConnection: false,
+      replicaSet: 'atlas-vjf3m1-shard-0',
+      authSource: 'admin',
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
-      console.log('MongoDB connected successfully');
-      return mongoose;
-    }).catch((error) => {
-      console.error('MongoDB connection error:', error);
-      throw error;
-    });
+    console.log('Attempting to connect to MongoDB...');
+    
+    cached.promise = mongoose.connect(MONGODB_URI!, opts)
+      .then((mongoose) => {
+        console.log('MongoDB connected successfully');
+        return mongoose;
+      })
+      .catch((error) => {
+        console.error('MongoDB connection error:', error);
+        console.error('Connection string:', MONGODB_URI?.replace(/\/\/[^:]+:[^@]+@/, '//<credentials>@'));
+        throw error;
+      });
   }
 
   try {
@@ -61,5 +73,18 @@ async function dbConnect() {
 
   return cached.conn;
 }
+
+// Handle connection errors
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connected');
+});
 
 export default dbConnect;
