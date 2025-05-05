@@ -113,8 +113,7 @@ export function getLocalServicesByEmail(email: string) {
   }
 }
 
-// Export all functions
-export default {
+const localDataFallback = {
   getLocalServices,
   saveLocalServices,
   addLocalService,
@@ -123,3 +122,5 @@ export default {
   deleteLocalService,
   getLocalServicesByEmail
 };
+
+export default localDataFallback;

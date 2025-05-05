@@ -153,8 +153,10 @@ export function validateModel(data: any, requiredFields: string[]): string[] {
   return errors;
 }
 
-export default {
+const jsonDb = {
   ServicesCollection,
   TransactionsCollection,
   validateModel
 };
+
+export default jsonDb;

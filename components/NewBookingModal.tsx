@@ -289,12 +289,18 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
     !bookedSlots.includes(time)
   );
 
-  // Move the useEffect outside of any conditions
+  // Update total price when material price changes
+  useEffect(() => {
+    if (!serviceDetails) return;
+    setTotalPrice(serviceDetails.price + materialPrice);
+  }, [materialPrice, serviceDetails]);
+
+  // Handle modal visibility
   useEffect(() => {
     if (isOpen) {
       // Your existing effect code
     }
-  }, [isOpen]); // Add isOpen to dependencies
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -330,12 +336,6 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
       }
     }
   };
-
-  // Update total price when material price changes
-  useEffect(() => {
-    if (!serviceDetails) return;
-    setTotalPrice(serviceDetails.price + materialPrice);
-  }, [materialPrice, serviceDetails]);
 
   const handleProceedToPayment = () => {
     console.log('Payment proceeding with:', { selectedService, selectedDate, selectedTime, serviceDetails });
