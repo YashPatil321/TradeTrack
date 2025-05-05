@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const body = await req.text();
   const signature = headers().get('stripe-signature') as string;
 
-  let event: Stripe.Event;
+  let event: any;
 
   try {
     event = stripe.webhooks.constructEvent(
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
     switch (event.type) {
       case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const paymentIntent = event.data.object;
         
         // Update transaction status
         await Transaction.findOneAndUpdate(
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         break;
 
       case 'payment_intent.payment_failed':
-        const failedPayment = event.data.object as Stripe.PaymentIntent;
+        const failedPayment = event.data.object;
         
         // Update transaction status
         await Transaction.findOneAndUpdate(
