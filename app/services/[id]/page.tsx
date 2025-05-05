@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { SessionProvider } from 'next-auth/react';
 import PayNowButton from '@/components/PayNowButton';
+import Image from 'next/image';
 
 interface ServiceDetails {
   _id: string;
@@ -98,10 +99,12 @@ function ServiceDetailsContent() {
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         {service.image && (
           <div className="w-full h-64 relative">
-            <img 
+            <Image 
               src={service.image} 
               alt={service.name} 
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>
         )}

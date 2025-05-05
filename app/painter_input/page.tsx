@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import { FileUploader } from "react-drag-drop-files";
+import Image from 'next/image';
 
 function PlumberInput() {
   const { data: session, status } = useSession();
@@ -254,11 +255,15 @@ function PlumberInput() {
             {imagePreview && (
               <div className="mt-4">
                 <p className="text-black mb-2">Preview:</p>
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
-                  className="max-h-40 rounded"
-                />
+                <div className="relative w-full h-40">
+                  <Image 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    fill
+                    className="object-contain rounded"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                </div>
               </div>
             )}
           </div>
