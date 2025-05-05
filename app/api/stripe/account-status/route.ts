@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../../lib/auth";
 import dbConnect from "../../../../lib/dbConnect";
 import stripe from "../../../../lib/stripe";
-import Service from "../../../../models/Service";
+import User from "@/models/User";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -21,9 +21,6 @@ export async function GET(req: NextRequest) {
 
     await dbConnect();
     
-    // Import Mongoose models
-    const { default: User } = await import('@/models/User');
-
     const user = await User.findOne({ email: session.user.email });
     if (!user?.stripeAccountId) {
       return NextResponse.json({
