@@ -74,10 +74,6 @@ const nextConfig = {
   // Configure build output
   output: 'standalone',
 
-  experimental: {
-    serverActions: true,
-  },
-
   // Configure which routes should be static
   staticPageGenerationTimeout: 120,
 
