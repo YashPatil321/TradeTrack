@@ -253,17 +253,14 @@ function PlumberInput() {
               label="Drag & drop an image here or click to browse"
             />
             {imagePreview && (
-              <div className="mt-4">
-                <p className="text-black mb-2">Preview:</p>
-                <div className="relative w-full h-40">
-                  <Image 
-                    src={imagePreview} 
-                    alt="Preview" 
-                    fill
-                    className="object-contain rounded"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
+              <div className="relative w-full h-48 mb-4">
+                <Image
+                  src={imagePreview}
+                  alt="Service preview"
+                  fill
+                  className="object-cover rounded-lg"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
               </div>
             )}
           </div>
