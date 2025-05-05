@@ -75,28 +75,18 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
       '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
     ]);
     
-    // CRITICAL: Process specific services from MongoDB
+    // Process services from MongoDB
     if (service.services && Array.isArray(service.services) && service.services.length > 0) {
-      console.log('MongoDB handyman services found:', service.services);
+      const serviceOptions = service.services.map((s: any, index: number) => ({
+        id: `service-${index}`,
+        name: s.service,
+        rate: s.rate,
+        timeLimit: s.timeLimit,
+        description: s.description || '',
+        category: s.category,
+        materials: Array.isArray(s.materials) ? s.materials : []
+      }));
       
-      // Map each service to our required format
-      const serviceOptions = service.services.map((s: any, index: number) => {
-        // These are the exact services the handyman selected when signing up
-        // service.service is the actual service name (e.g., "Faucet Replacement")
-        return {
-          id: `service-${index}`,
-          name: s.service,
-          rate: s.rate,
-          timeLimit: s.timeLimit,
-          description: s.description || '',
-          category: s.category,
-          materials: Array.isArray(s.materials) ? s.materials : []
-        };
-      });
-      
-      console.log('Processed service options:', serviceOptions);
-      
-      // Sort services by category
       serviceOptions.sort((a: ServiceOption, b: ServiceOption) => {
         if (a.category < b.category) return -1;
         if (a.category > b.category) return 1;
@@ -104,14 +94,11 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
       });
       
       setServices(serviceOptions);
-      console.log('Loaded structured services:', serviceOptions);
       
-      // If there's only one service, pre-select it
       if (serviceOptions.length === 1) {
         setSelectedService(serviceOptions[0].id);
       }
     } else if (service.skillsAndServices) {
-      // Legacy format (fallback)
       const serviceList = service.skillsAndServices.split(',').map((s: string, index: number) => ({
         id: 'service-' + index,
         name: s.trim(),
@@ -121,9 +108,7 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
         category: 'General'
       }));
       setServices(serviceList);
-      console.log('Loaded legacy services:', serviceList);
     } else {
-      // Use the service itself as a single option if no specific services found
       const fallbackService = {
         id: service._id || 'service-0',
         name: service.name || 'General Handyman Service',
@@ -134,7 +119,6 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
       };
       setServices([fallbackService]);
       setSelectedService(fallbackService.id);
-      console.log('Created fallback service:', fallbackService);
     }
   }, [service]);
 
@@ -150,23 +134,15 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
       return;
     }
     
-    // Find the selected service details
-    console.log('Looking for service with ID:', selectedService);
-    console.log('Available services:', services);
-    
     const selected = services.find((s) => s.id === selectedService);
-    console.log('Selected service:', selected);
-    
     if (!selected) return;
     
-    // If the service has materials, set them as options
     if (selected.materials && selected.materials.length > 0) {
       setMaterialOptions(selected.materials);
     } else {
       setMaterialOptions([]);
     }
     
-    // Calculate duration hours based on time limit string
     let durationHours = 1;
     const timeLimit = selected.timeLimit || '1 hour';
     if (timeLimit.includes('1.5')) durationHours = 1.5;
@@ -188,7 +164,6 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
     });
     
     setTotalPrice(totalPriceValue);
-    
   }, [selectedService, services, materialPrice, materialName]);
 
   // Fetch booked slots when date or service changes
@@ -209,6 +184,12 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
 
     fetchBookedSlots();
   }, [service?._id, selectedDate]);
+
+  // Update total price when material price changes
+  useEffect(() => {
+    if (!serviceDetails) return;
+    setTotalPrice(serviceDetails.price + materialPrice);
+  }, [materialPrice, serviceDetails]);
 
   // Generate time slots when date or service changes
   useEffect(() => {
@@ -288,12 +269,6 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
   const availableSlots = availableTimes.filter(time => 
     !bookedSlots.includes(time)
   );
-
-  // Update total price when material price changes
-  useEffect(() => {
-    if (!serviceDetails) return;
-    setTotalPrice(serviceDetails.price + materialPrice);
-  }, [materialPrice, serviceDetails]);
 
   // Handle modal visibility
   useEffect(() => {

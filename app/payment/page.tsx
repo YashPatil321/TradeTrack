@@ -197,14 +197,14 @@ function PaymentPageContent() {
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
         <div className="p-6">
           <div className="flex flex-col md:flex-row items-start mb-4">
-            {service.image && (
-              <div className="relative w-24 h-24 mr-4 mb-4 md:mb-0">
-                <Image 
-                  src={service.image} 
-                  alt={service.name} 
+            {service && (
+              <div className="relative w-full h-48 mb-4">
+                <Image
+                  src={service.image || '/default-service.jpg'}
+                  alt={service.name}
                   fill
-                  className="object-cover rounded-md"
-                  sizes="96px"
+                  className="object-cover rounded-lg"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>
             )}

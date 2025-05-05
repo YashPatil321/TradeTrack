@@ -364,10 +364,10 @@ function Locator() {
                 </button>
               </div>
 
-              {selectedService.image && (
+              {selectedService && (
                 <div className="relative w-full h-48 mb-4">
                   <Image
-                    src={selectedService.image}
+                    src={selectedService.image || '/default-service.jpg'}
                     alt={selectedService.name}
                     fill
                     className="object-cover rounded-lg"

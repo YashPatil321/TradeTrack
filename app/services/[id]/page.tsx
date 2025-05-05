@@ -97,13 +97,13 @@ function ServiceDetailsContent() {
   return (
     <div className="max-w-4xl mx-auto my-10 p-6">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        {service.image && (
-          <div className="w-full h-64 relative">
-            <Image 
-              src={service.image} 
-              alt={service.name} 
+        {service && (
+          <div className="relative w-full h-48 mb-4">
+            <Image
+              src={service.image || '/default-service.jpg'}
+              alt={service.name}
               fill
-              className="object-cover"
+              className="object-cover rounded-lg"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>
