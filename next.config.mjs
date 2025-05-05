@@ -72,11 +72,6 @@ const nextConfig = {
 
   // Configure build output
   output: 'standalone',
-
-  // Configure experimental features
-  experimental: {
-    serverActions: true,
-  },
 };
 
 export default nextConfig;
