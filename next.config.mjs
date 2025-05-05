@@ -29,7 +29,6 @@ const nextConfig = {
 
   // Configuring image domains
   images: {
-    domains: ['example.com'], // Update with the domains you plan to use
     remotePatterns: [
       {
         protocol: 'http',
@@ -37,6 +36,11 @@ const nextConfig = {
         port: '3000',
         pathname: '/api/images/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.vercel.app',
+        pathname: '/api/images/**',
+      }
     ],
   },
 

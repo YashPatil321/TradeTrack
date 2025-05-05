@@ -286,6 +286,13 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
     !bookedSlots.includes(time)
   );
 
+  // Move the useEffect outside of any conditions
+  useEffect(() => {
+    if (isOpen) {
+      // Your existing effect code
+    }
+  }, [isOpen]); // Add isOpen to dependencies
+
   if (!isOpen) return null;
 
   const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

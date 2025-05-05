@@ -3,6 +3,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
+import Image from 'next/image';
 
 interface ImageUploaderProps {
   onImageUploadedAction: (imageUrl: string) => void;
@@ -31,7 +32,7 @@ export default function ImageUploader({ onImageUploadedAction, currentImage, cla
     // Start uploading
     setIsUploading(true);
 
-    try { // 
+    try {
       // Create form data
       const formData = new FormData();
       formData.append('file', file);
@@ -90,7 +91,15 @@ export default function ImageUploader({ onImageUploadedAction, currentImage, cla
           </div>
         ) : preview ? (
           <div className="text-center">
-            <img src={preview} alt="Preview" className="max-h-48 mx-auto rounded-md" />
+            <div className="relative w-full h-48">
+              <Image
+                src={preview}
+                alt="Preview"
+                fill
+                className="object-contain rounded-md"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            </div>
             <p className="mt-2 text-sm text-gray-600">
               {isDragActive ? 'Drop to replace image' : 'Click or drag to replace image'}
             </p>
