@@ -3,6 +3,7 @@
 import { SessionProvider, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import PayNowButton from "@/components/PayNowButton";
 
@@ -86,10 +87,13 @@ function DashboardContent() {
               >
                 {service.image && (
                   <div className="h-48 w-full relative">
-                    <img 
+                    <Image 
                       src={service.image} 
                       alt={service.name} 
                       className="h-full w-full object-cover"
+                      width={500}
+                      height={300}
+                      priority
                     />
                   </div>
                 )}

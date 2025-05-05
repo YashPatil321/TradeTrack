@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import { FileUploader } from "react-drag-drop-files";
+import Image from "next/image";
 
 function ElectricianInput() {
   const { data: session, status } = useSession();
@@ -252,10 +253,13 @@ function ElectricianInput() {
             {imagePreview && (
               <div className="mt-4">
                 <p className="text-black mb-2">Preview:</p>
-                <img 
+                <Image 
                   src={imagePreview} 
                   alt="Preview" 
                   className="max-h-40 rounded"
+                  width={300}
+                  height={160}
+                  priority
                 />
               </div>
             )}

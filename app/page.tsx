@@ -219,7 +219,7 @@ function Locator() {
       }
     });
     setMarkers(newMarkers);
-  }, [map, services, selectedTrade]);
+  }, [map, services, selectedTrade, markers]);
 
   // "Search Near Me" functionality: recenter map on user's location
   const searchNearMe = () => {
