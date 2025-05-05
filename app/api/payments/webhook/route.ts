@@ -8,11 +8,7 @@ import Transaction from "../../../../models/Transaction";
 // Disable Next.js body parsing since we need the raw body for Stripe signature verification
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const bodyParser = false;
 
 // Helper function to create a buffer from the request stream
 async function buffer(req: NextRequest) {
