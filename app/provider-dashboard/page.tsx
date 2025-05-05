@@ -42,32 +42,31 @@ function ProviderDashboardContent() {
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (status === "authenticated") {
+      const fetchBookings = async () => {
+        try {
+          setIsLoading(true);
+          const res = await fetch("/api/bookings/user");
+          const json = await res.json();
+          
+          if (json.success) {
+            // Set provider bookings from the API
+            setBookings(json.providerBookings || []);
+            setIsProvider(json.isProvider);
+            
+            if (!json.isProvider) {
+              // If user is not a provider, redirect to regular profile
+              router.push("/profile");
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching provider bookings:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
       fetchBookings();
     }
-  }, [status, router, fetchBookings]);
-
-  async function fetchBookings() {
-    try {
-      setIsLoading(true);
-      const res = await fetch("/api/bookings/user");
-      const json = await res.json();
-      
-      if (json.success) {
-        // Set provider bookings from the API
-        setBookings(json.providerBookings || []);
-        setIsProvider(json.isProvider);
-        
-        if (!json.isProvider) {
-          // If user is not a provider, redirect to regular profile
-          router.push("/profile");
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching provider bookings:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  }, [status, router]);
 
   // Format date from ISO string
   const formatDate = (dateString?: string) => {

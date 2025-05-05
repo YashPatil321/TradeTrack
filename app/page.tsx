@@ -13,6 +13,7 @@ import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import ListYourTradeButton from "../components/ListYourTradeButton";
 import NewBookingModal from "@/components/NewBookingModal";
+import Image from 'next/image';
 
 interface ServiceSchedule {
   day: string;
@@ -364,11 +365,15 @@ function Locator() {
               </div>
 
               {selectedService.image && (
-                <img
-                  src={selectedService.image}
-                  alt={selectedService.name}
-                  className="w-full h-48 object-cover rounded-lg mb-4"
-                />
+                <div className="relative w-full h-48 mb-4">
+                  <Image
+                    src={selectedService.image}
+                    alt={selectedService.name}
+                    fill
+                    className="object-cover rounded-lg"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                </div>
               )}
 
               <div className="mb-4">

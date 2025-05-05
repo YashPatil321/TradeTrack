@@ -198,14 +198,17 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
         try {
           const res = await fetch(`/api/bookings/booked?serviceId=${service._id}&date=${encodeURIComponent(selectedDate)}`);
           const data = await res.json();
-          if (data.success) setBookedSlots(data.bookedSlots);
-        } catch (err) {
-          console.error('Error fetching booked slots:', err);
+          if (data.success) {
+            setBookedSlots(data.bookedSlots);
+          }
+        } catch (error) {
+          console.error('Error fetching booked slots:', error);
         }
       }
     };
+
     fetchBookedSlots();
-  }, [selectedDate, service?._id]);
+  }, [service?._id, selectedDate]);
 
   // Generate time slots when date or service changes
   useEffect(() => {

@@ -6,6 +6,7 @@ import { useSession, SessionProvider } from 'next-auth/react';
 import Link from 'next/link';
 import StripeProvider from '@/components/StripeProvider';
 import CheckoutForm from '@/components/CheckoutForm';
+import Image from 'next/image';
 
 function PaymentPageContent() {
   const router = useRouter();
@@ -197,11 +198,15 @@ function PaymentPageContent() {
         <div className="p-6">
           <div className="flex flex-col md:flex-row items-start mb-4">
             {service.image && (
-              <img 
-                src={service.image} 
-                alt={service.name} 
-                className="w-24 h-24 object-cover rounded-md mr-4 mb-4 md:mb-0"
-              />
+              <div className="relative w-24 h-24 mr-4 mb-4 md:mb-0">
+                <Image 
+                  src={service.image} 
+                  alt={service.name} 
+                  fill
+                  className="object-cover rounded-md"
+                  sizes="96px"
+                />
+              </div>
             )}
             <div className="flex-1">
               <h2 className="text-2xl font-semibold text-gray-900">{service.name}</h2>
