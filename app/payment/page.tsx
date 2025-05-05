@@ -293,6 +293,9 @@ function PaymentPageContent() {
             serviceName={service.name} 
             amount={amount}
             description={`Payment for handyman service: ${service.name}`}
+            // Include date and time from the URL parameters
+            date={serviceDate || ''}
+            time={serviceTime || ''}
             addressInfo={{
               addressLine1,
               addressLine2,

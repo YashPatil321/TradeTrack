@@ -24,7 +24,9 @@ export default function CheckoutForm({
   amount,
   description,
   addressInfo,
-  validateAddress
+  validateAddress,
+  date,
+  time
 }: { 
   serviceId: string;
   serviceName: string;
@@ -32,6 +34,8 @@ export default function CheckoutForm({
   description: string;
   addressInfo: AddressInfo;
   validateAddress: () => boolean;
+  date?: string;
+  time?: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -104,7 +108,15 @@ export default function CheckoutForm({
           amount,
           email,
           description,
-          address: addressInfo,
+          address: {
+            ...addressInfo,
+            // Make sure date and time are included in the address object
+            date: date || '',
+            time: time || ''
+          },
+          // Also include date and time at the top level
+          date: date || '',
+          time: time || '',
         }),
       });
       
@@ -127,10 +139,18 @@ export default function CheckoutForm({
               email: email,
             },
           },
-          metadata: {
-            booking_id: bookingId,
-            service_id: serviceId,
-          },
+          // Use a supported property for metadata instead of directly in confirmParams
+          shipping: {
+            name: `Booking ${bookingId}`,
+            address: {
+              line1: addressInfo.addressLine1,
+              line2: addressInfo.addressLine2 || '',
+              city: addressInfo.city,
+              state: addressInfo.state,
+              postal_code: addressInfo.zipCode,
+              country: 'US'
+            }
+          }
         },
       });
       

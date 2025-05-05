@@ -16,6 +16,16 @@ interface ServiceDetails {
   mainLocation: string;
   trade: string;
   skillsAndServices?: string;
+  services?: Array<{
+    service: string;
+    category?: string;
+    rate: number;
+    timeLimit: string;
+    description: string;
+    materialName?: string | null;
+    materialPrice?: number;
+    totalPrice?: number;
+  }>;
   userEmail: string;
   schedule?: {
     day: string;
@@ -111,19 +121,14 @@ function ServiceDetailsContent() {
             )}
           </div>
           
-          <p className="text-gray-600 mb-6">{service.description}</p>
+          <p className="text-black mb-6">{service.description}</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-800 mb-3">Service Details</h2>
               <div className="space-y-2">
-                <p><span className="font-medium">Hours:</span> {service.hours}</p>
-                <p><span className="font-medium">Location:</span> {service.mainLocation}</p>
-                {isHandyman && service.skillsAndServices && (
-                  <p>
-                    <span className="font-medium">Skills & Services:</span> {service.skillsAndServices}
-                  </p>
-                )}
+                <p className="text-black"><span className="font-medium">Hours:</span> {service.hours}</p>
+                <p className="text-black"><span className="font-medium">Location:</span> {service.mainLocation}</p>
               </div>
             </div>
             
@@ -134,7 +139,7 @@ function ServiceDetailsContent() {
                   {service.schedule.map((slot, index) => (
                     <div key={index} className="border-l-4 border-blue-500 pl-3 py-1">
                       <p className="font-medium">{slot.day}</p>
-                      <p className="text-sm text-gray-600">{slot.time} - {slot.address}</p>
+                      <p className="text-sm text-black">{slot.time} - {slot.address}</p>
                     </div>
                   ))}
                 </div>
@@ -142,11 +147,67 @@ function ServiceDetailsContent() {
             )}
           </div>
           
+          {/* Detailed Services Section */}
+          {isHandyman && service.services && service.services.length > 0 && (
+            <div className="border-t border-gray-200 pt-6 mb-6">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Available Services</h2>
+              {/* Group services by category */}
+              {Object.entries(service.services.reduce((acc, serviceItem) => {
+                const category = serviceItem.category || "Other";
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(serviceItem);
+                return acc;
+              }, {} as Record<string, typeof service.services>)).map(([category, items]) => (
+                <div key={category} className="mb-6">
+                  <h3 className="text-lg font-bold text-black mb-3 border-b pb-2">{category} Services</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {items.map((serviceItem, index) => (
+                      <div key={index} className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="text-lg font-semibold text-black">{serviceItem.service}</h3>
+                          <div className="text-lg font-bold text-black">
+                            {serviceItem.materialName ? (
+                              <>${serviceItem.totalPrice} flat rate <span className="text-black font-normal">({serviceItem.timeLimit})</span></>
+                            ) : (
+                              <>${serviceItem.rate} flat rate <span className="text-black font-normal">({serviceItem.timeLimit})</span></>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-black">{serviceItem.description}</p>
+                        
+                        {/* Show material details if available */}
+                        {serviceItem.materialName && (
+                          <div className="mt-3 pt-2 border-t border-gray-200">
+                            <div className="flex justify-between text-black">
+                              <span>Service fee:</span>
+                              <span>${serviceItem.rate}</span>
+                            </div>
+                            <div className="flex justify-between text-black">
+                              <span>Materials ({serviceItem.materialName}):</span>
+                              <span>${serviceItem.materialPrice}</span>
+                            </div>
+                            <div className="flex justify-between text-black font-bold mt-1 pt-1 border-t border-gray-200">
+                              <span>Total:</span>
+                              <span>${serviceItem.totalPrice}</span>
+                            </div>
+                            <div className="mt-2 text-black text-sm italic">
+                              Note: If service takes longer than {serviceItem.timeLimit}, additional charges may apply.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="border-t pt-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-3">Book this Service</h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-black mb-4">
               {isHandyman 
-                ? "Need handyman help? Book this service now with our secure payment system."
+                ? "Need handyman help? Select from our detailed services above and book now with our secure payment system."
                 : `Interested in this ${service.trade.replace('_', ' ')} service? Contact the provider for more information.`
               }
             </p>
