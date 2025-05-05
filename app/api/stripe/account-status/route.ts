@@ -6,64 +6,44 @@ import dbConnect from "../../../../lib/dbConnect";
 import stripe from "../../../../lib/stripe";
 import Service from "../../../../models/Service";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(req: NextRequest) {
-  await dbConnect();
-
-  // Check authentication
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.email) {
-    return NextResponse.json(
-      { success: false, error: "Authentication required" },
-      { status: 401 }
-    );
-  }
-
   try {
-    // Find all services for this user where they are a handyman
-    const services = await Service.find({ 
-      userEmail: session.user.email,
-      trade: "handyman" 
-    });
-
-    // If no services found
-    if (!services || services.length === 0) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: "No handyman services found for this account" },
-        { status: 404 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    // Get the first service with a Stripe account ID (they should all have the same one)
-    const serviceWithStripeAccount = services.find(service => service.stripeAccountId);
+    await dbConnect();
     
-    if (!serviceWithStripeAccount?.stripeAccountId) {
-      return NextResponse.json(
-        { success: false, error: "No Stripe account connected", hasAccount: false },
-        { status: 200 }
-      );
+    // Import Mongoose models
+    const { default: User } = await import('@/models/User');
+
+    const user = await User.findOne({ email: session.user.email });
+    if (!user?.stripeAccountId) {
+      return NextResponse.json({
+        success: true,
+        isConnected: false
+      });
     }
 
-    // Get the account details from Stripe
-    const account = await stripe.accounts.retrieve(
-      serviceWithStripeAccount.stripeAccountId
-    );
-
-    return NextResponse.json(
-      { 
-        success: true,
-        hasAccount: true,
-        accountId: account.id,
-        chargesEnabled: account.charges_enabled,
-        payoutsEnabled: account.payouts_enabled,
-        detailsSubmitted: account.details_submitted
-      },
-      { status: 200 }
-    );
+    const account = await stripe.accounts.retrieve(user.stripeAccountId);
+    
+    return NextResponse.json({
+      success: true,
+      isConnected: true,
+      account
+    });
   } catch (error: any) {
-    console.error("Error retrieving Stripe Connect account:", error);
+    console.error('Error checking Stripe account status:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 400 }
+      { success: false, error: 'Failed to check account status' },
+      { status: 500 }
     );
   }
 }
