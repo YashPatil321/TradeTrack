@@ -42,6 +42,7 @@ const nextConfig = {
         pathname: '/api/images/**',
       }
     ],
+    domains: ['images.unsplash.com'],
   },
 
   // Internationalization configuration
@@ -72,6 +73,18 @@ const nextConfig = {
 
   // Configure build output
   output: 'standalone',
+
+  experimental: {
+    serverActions: true,
+  },
+
+  // Configure which routes should be static
+  staticPageGenerationTimeout: 120,
+
+  // Skip API routes during build
+  skipTrailingSlashRedirect: true,
+
+  skipMiddlewareUrlNormalize: true,
 };
 
 export default nextConfig;

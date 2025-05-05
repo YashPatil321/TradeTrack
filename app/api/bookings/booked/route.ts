@@ -1,38 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
-import mongoose from "mongoose";
+import Booking from "@/models/Booking";
 
-// Define Booking model if it doesn't exist
-let Booking: mongoose.Model<any>;
-
-try {
-  // Try to fetch the existing model
-  Booking = mongoose.model("Booking");
-} catch {
-  // Create the model if it doesn't exist
-  const BookingSchema = new mongoose.Schema({
-    userId: { type: String, required: true },
-    serviceId: { type: String, required: true },
-    serviceName: { type: String, required: true },
-    amount: { type: Number, required: true },
-    customerEmail: { type: String, required: true },
-    date: { type: String, required: true },
-    time: { type: String, required: true },
-    status: { type: String, default: "pending" },
-    paymentStatus: { type: String, default: "pending" },
-    createdAt: { type: Date, default: Date.now },
-  });
-  
-  Booking = mongoose.model("Booking", BookingSchema);
-}
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET handler to retrieve booked time slots for a specific service on a specific date
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
     
-    // Get query parameters
-    const searchParams = req.nextUrl.searchParams;
+    const { searchParams } = new URL(req.url);
     const serviceId = searchParams.get("serviceId");
     const date = searchParams.get("date");
     
@@ -43,14 +21,12 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    // Find all bookings for this service on this date
     const bookings = await Booking.find({
-      serviceId: serviceId,
-      date: date,
-      status: { $ne: "cancelled" }, // Exclude cancelled bookings
-    });
+      serviceId,
+      date,
+      status: { $ne: "cancelled" }
+    }).select('time');
     
-    // Extract booked time slots
     const bookedSlots = bookings.map(booking => booking.time);
     
     return NextResponse.json(
@@ -60,7 +36,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Error fetching booked slots:", error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: "Failed to fetch booked slots" },
       { status: 500 }
     );
   }
