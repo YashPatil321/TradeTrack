@@ -50,6 +50,14 @@ interface Service {
   location?: PointLocation;    // GeoJSON location for handyman/static services
   estimatedTime?: string;      // Estimated time for service completion
   phoneNumber?: string;        // Added for contact information
+  services?: Array<{           // Individual services offered by handyman
+    service: string;
+    category?: string;
+    rate: number;
+    timeLimit: string;
+    description?: string;
+    materials?: Array<{name: string, price: number}>;
+  }>
 }
 
 function Locator() {
@@ -372,7 +380,7 @@ function Locator() {
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">Details</h3>
                 <ul className="text-gray-900">
                   <li className="mb-1 text-gray-900">
-                    <strong>Type:</strong> {selectedService.trade.replace("_", " ")}
+                    <strong>Type:</strong> {selectedService.trade === "food_truck" ? "Food Truck" : selectedService.trade.charAt(0).toUpperCase() + selectedService.trade.slice(1)}
                   </li>
                   <li className="mb-1 text-gray-900">
                     <strong>Location:</strong> {selectedService.mainLocation}
@@ -386,13 +394,18 @@ function Locator() {
                         <strong>Services:</strong> {selectedService.skillsAndServices}
                       </li>
                       <li className="mb-1 text-gray-900">
-                        <strong>Estimated Time:</strong> {selectedService.estimatedTime || "1 hour"}
-                      </li>
-                      <li className="mb-1 text-gray-900">
-                        <strong>Price:</strong> ${selectedService.price || 75} {selectedService.priceType || "per hour"}
-                      </li>
-                      <li className="mb-1 text-yellow-600 text-sm italic">
-                        Note: If service takes longer than estimated, additional charges may apply.
+                        <strong>Services:</strong> 
+                        {selectedService.services && selectedService.services.length > 0 ? (
+                          <ul className="ml-4 list-disc">
+                            {selectedService.services.map((s: any, idx: number) => (
+                              <li key={idx} className="text-black">
+                                {s.service} - ${s.rate} flat rate ({s.timeLimit})
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span>General handyman services</span>
+                        )}
                       </li>
                     </>
                   )}

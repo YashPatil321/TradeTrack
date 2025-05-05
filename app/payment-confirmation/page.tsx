@@ -8,9 +8,22 @@ import Link from 'next/link';
 function PaymentConfirmation() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
+  // Get parameters from the URL
   const serviceId = searchParams.get('service_id');
-  const paymentIntent = searchParams.get('payment_intent');
+  // Extract payment intent from the complex Stripe URL
+  const paymentIntentParam = searchParams.get('payment_intent') || 
+    searchParams.get('payment_intent_client_secret')?.split('_secret_')[0];
   const redirectStatus = searchParams.get('redirect_status');
+  
+  // Log all search params to debug
+  const allParams: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    allParams[key] = value;
+  });
+  console.log('All URL parameters:', allParams);
+  console.log('Service ID:', serviceId);
+  console.log('Payment Intent:', paymentIntentParam);
+  console.log('Redirect Status:', redirectStatus);
   
   const [service, setService] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -86,10 +99,10 @@ function PaymentConfirmation() {
             <p className="text-gray-700 mb-2">
               <span className="font-semibold">Service:</span> {service.name}
             </p>
-            {paymentIntent && (
+            {paymentIntentParam && (
               <p className="text-gray-700 mb-2">
                 <span className="font-semibold">Payment Reference:</span>{' '}
-                <span className="font-mono text-sm">{paymentIntent}</span>
+                <span className="font-mono text-sm">{paymentIntentParam}</span>
               </p>
             )}
           </div>

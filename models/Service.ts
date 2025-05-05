@@ -42,9 +42,22 @@ const ServiceSchema = new Schema({
     enum: ["food_truck", "plumber", "electrician", "handyman", "painter"],
     required: true,
   },
-  // Price information for handyman services
-  price: { type: Number },
-  priceType: { type: String }, // hourly, fixed, etc.
+  // CRITICAL: Add services array for handyman specific services
+  services: [
+    {
+      service: { type: String, required: true },
+      category: { type: String, required: true },
+      rate: { type: Number, required: true },
+      timeLimit: { type: String, required: true },
+      description: { type: String },
+      materials: [
+        {
+          name: { type: String, required: true },
+          price: { type: Number, required: true }
+        }
+      ]
+    }
+  ],
   // Associate the service with the user (e.g., by storing their email)
   userEmail: { type: String, required: true },
   // Stripe Connect account ID for receiving payments (for handyman services)

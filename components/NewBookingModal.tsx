@@ -10,11 +10,24 @@ interface BookingModalProps {
   onCloseAction: () => void;
 }
 
+interface ServiceOption {
+  id: string;
+  name: string;
+  rate: number;
+  timeLimit: string;
+  description: string;
+  category: string;
+  materials?: Array<{name: string, price: number}>;
+}
+
 interface ServiceDetails {
   name: string;
   estimatedTime: string;
   durationHours: number;
   price: number;
+  materialName?: string;
+  materialPrice?: number;
+  totalPrice?: number;
 }
 
 export default function NewBookingModal({ service, isOpen, onCloseAction }: BookingModalProps) {
@@ -27,25 +40,101 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
   const [loading, setLoading] = useState(false);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
-  const [services, setServices] = useState<string[]>([]);
+  const [services, setServices] = useState<ServiceOption[]>([]);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [selectedMaterial, setSelectedMaterial] = useState<string>('');
+  const [materialOptions, setMaterialOptions] = useState<Array<{name: string, price: number}>>([]);
+  const [materialPrice, setMaterialPrice] = useState<number>(0);
+  const [materialName, setMaterialName] = useState<string>('');
+  const [totalPrice, setTotalPrice] = useState<number>(0);
 
   // Initialize data on component mount
   useEffect(() => {
-    if (service && service.skillsAndServices) {
-      // Set available services
-      const serviceList = service.skillsAndServices.split(',').map((s: string) => s.trim());
-      setServices(serviceList);
+    if (!service) return;
+    console.log('Handyman service data received:', service);
+    
+    // Make sure we're only working with handyman services
+    if (service.trade !== 'handyman') {
+      console.error('Error: This is not a handyman service');
+      return;
+    }
+    
+    // Generate dates (next 7 days)
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+    }
+    setAvailableDates(dates);
+    
+    // Set default time slots
+    setAvailableTimes([
+      '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+      '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
+    ]);
+    
+    // CRITICAL: Process specific services from MongoDB
+    if (service.services && Array.isArray(service.services) && service.services.length > 0) {
+      console.log('MongoDB handyman services found:', service.services);
       
-      // Generate dates (next 7 days)
-      const dates = [];
-      const today = new Date();
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        dates.push(date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+      // Map each service to our required format
+      const serviceOptions = service.services.map((s: any, index: number) => {
+        // These are the exact services the handyman selected when signing up
+        // service.service is the actual service name (e.g., "Faucet Replacement")
+        return {
+          id: `service-${index}`,
+          name: s.service,
+          rate: s.rate,
+          timeLimit: s.timeLimit,
+          description: s.description || '',
+          category: s.category,
+          materials: Array.isArray(s.materials) ? s.materials : []
+        };
+      });
+      
+      console.log('Processed service options:', serviceOptions);
+      
+      // Sort services by category
+      serviceOptions.sort((a: ServiceOption, b: ServiceOption) => {
+        if (a.category < b.category) return -1;
+        if (a.category > b.category) return 1;
+        return 0;
+      });
+      
+      setServices(serviceOptions);
+      console.log('Loaded structured services:', serviceOptions);
+      
+      // If there's only one service, pre-select it
+      if (serviceOptions.length === 1) {
+        setSelectedService(serviceOptions[0].id);
       }
-      setAvailableDates(dates);
+    } else if (service.skillsAndServices) {
+      // Legacy format (fallback)
+      const serviceList = service.skillsAndServices.split(',').map((s: string, index: number) => ({
+        id: 'service-' + index,
+        name: s.trim(),
+        rate: service.price || 75,
+        timeLimit: '1 hour',
+        description: '',
+        category: 'General'
+      }));
+      setServices(serviceList);
+      console.log('Loaded legacy services:', serviceList);
+    } else {
+      // Use the service itself as a single option if no specific services found
+      const fallbackService = {
+        id: service._id || 'service-0',
+        name: service.name || 'General Handyman Service',
+        rate: service.price || 75,
+        timeLimit: '1 hour',
+        description: service.description || '',
+        category: 'General'
+      };
+      setServices([fallbackService]);
+      setSelectedService(fallbackService.id);
+      console.log('Created fallback service:', fallbackService);
     }
   }, [service]);
 
@@ -53,37 +142,54 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
   useEffect(() => {
     if (!selectedService) {
       setServiceDetails(null);
+      setMaterialOptions([]);
+      setMaterialPrice(0);
+      setMaterialName('');
+      setSelectedMaterial('');
+      setTotalPrice(0);
       return;
     }
-
-    // Determine service details based on the service name
-    let estimatedTime = "1 hour";
-    let durationHours = 1;
-    let price = service.price || 75;
     
-    const lowerCaseService = selectedService.toLowerCase();
+    // Find the selected service details
+    console.log('Looking for service with ID:', selectedService);
+    console.log('Available services:', services);
     
-    if (lowerCaseService.includes('repair') || lowerCaseService.includes('install')) {
-      estimatedTime = "2 hours";
-      durationHours = 2;
-      price = service.price ? service.price * 1.5 : 110;
-    } else if (lowerCaseService.includes('maintenance') || lowerCaseService.includes('plumbing')) {
-      estimatedTime = "1.5 hours";
-      durationHours = 1.5;
-      price = service.price ? service.price * 1.25 : 95;
-    } else if (lowerCaseService.includes('electrical')) {
-      estimatedTime = "2.5 hours";
-      durationHours = 2.5;
-      price = service.price ? service.price * 1.75 : 125;
+    const selected = services.find((s) => s.id === selectedService);
+    console.log('Selected service:', selected);
+    
+    if (!selected) return;
+    
+    // If the service has materials, set them as options
+    if (selected.materials && selected.materials.length > 0) {
+      setMaterialOptions(selected.materials);
+    } else {
+      setMaterialOptions([]);
     }
     
+    // Calculate duration hours based on time limit string
+    let durationHours = 1;
+    const timeLimit = selected.timeLimit || '1 hour';
+    if (timeLimit.includes('1.5')) durationHours = 1.5;
+    else if (timeLimit.includes('2')) durationHours = 2;
+    else if (timeLimit.includes('2.5')) durationHours = 2.5;
+    else if (timeLimit.includes('3')) durationHours = 3;
+    
+    const price = selected.rate;
+    const totalPriceValue = price + materialPrice;
+    
     setServiceDetails({
-      name: selectedService,
-      estimatedTime,
-      durationHours,
-      price
+      name: selected.name,
+      estimatedTime: timeLimit,
+      durationHours: durationHours,
+      price: price,
+      materialName: materialName,
+      materialPrice: materialPrice,
+      totalPrice: totalPriceValue
     });
-  }, [selectedService, service.price]);
+    
+    setTotalPrice(totalPriceValue);
+    
+  }, [selectedService, services, materialPrice, materialName]);
 
   // Fetch booked slots when date or service changes
   useEffect(() => {
@@ -184,6 +290,10 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
 
   const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedService(e.target.value);
+    // Reset material selection when service changes
+    setSelectedMaterial('');
+    setMaterialPrice(0);
+    setMaterialName('');
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -191,9 +301,32 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
   };
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    console.log('Time selected:', e.target.value);
     setSelectedTime(e.target.value);
+    console.log(`Selected time: ${e.target.value}`);
   };
+
+  const handleMaterialChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const materialId = e.target.value;
+    setSelectedMaterial(materialId);
+    
+    if (materialId === '') {
+      setMaterialPrice(0);
+      setMaterialName('');
+    } else {
+      const material = materialOptions.find(m => m.name === materialId);
+      if (material) {
+        setMaterialPrice(material.price);
+        setMaterialName(material.name);
+      }
+    }
+  };
+
+  // Update total price when material price changes
+  useEffect(() => {
+    if (serviceDetails) {
+      setTotalPrice(serviceDetails.price + materialPrice);
+    }
+  }, [materialPrice, serviceDetails]);
 
   const handleProceedToPayment = () => {
     console.log('Payment proceeding with:', { selectedService, selectedDate, selectedTime, serviceDetails });
@@ -204,8 +337,26 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
     
     setLoading(true);
     
-    // Redirect to payment page with all necessary details
-    window.location.href = `/payment?service=${encodeURIComponent(selectedService)}&date=${encodeURIComponent(selectedDate)}&time=${encodeURIComponent(selectedTime)}&estimatedTime=${encodeURIComponent(serviceDetails.estimatedTime)}&price=${serviceDetails.price}&serviceId=${encodeURIComponent(service._id || '')}`;
+    // Create query parameters
+    let queryParams = new URLSearchParams({
+      serviceId: service._id || '',
+      service: selectedService,
+      serviceName: serviceDetails.name,
+      date: selectedDate,
+      time: selectedTime,
+      estimatedTime: serviceDetails.estimatedTime,
+      price: totalPrice.toString()
+    });
+    
+    // Add material info if selected
+    if (materialName && materialPrice > 0) {
+      queryParams.append('materialName', materialName);
+      queryParams.append('materialPrice', materialPrice.toString());
+    }
+    
+    // Redirect to payment page
+    router.push(`/payment?${queryParams.toString()}`);
+    onCloseAction();
   };
 
   return (
@@ -224,61 +375,143 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
         
         {/* Service Selection */}
         <div className="mb-4">
-          <label className="block mb-2 font-semibold text-gray-900">Select Service</label>
-          <select 
-            id="service-select"
-            value={selectedService}
-            onChange={handleServiceChange}
-            className="w-full p-2 border border-gray-300 rounded cursor-pointer bg-white text-gray-900 font-medium"
-          >
-            <option value="">Choose a service...</option>
-            {services.map((service, index) => (
-              <option key={index} value={service}>{service}</option>
-            ))}
-          </select>
+          <label className="block mb-2 font-semibold text-gray-900">Select Service*</label>
+          <div className="relative">
+            <select 
+              id="service-select"
+              value={selectedService}
+              onChange={handleServiceChange}
+              className="w-full p-3 border border-gray-300 rounded-md shadow-sm cursor-pointer bg-white text-black"
+              required
+            >
+              <option value="">Choose a service...</option>
+              
+              {/* Group services by category */}
+              {Array.from(new Set(services.map(s => s.category))).map(category => (
+                <optgroup key={category} label={category}>
+                  {services
+                    .filter(s => s.category === category)
+                    .map(service => (
+                      <option key={service.id} value={service.id} className="text-black">
+                        {service.name} - ${service.rate} flat rate ({service.timeLimit})
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </div>
+          {selectedService && services.find(s => s.id === selectedService)?.description && (
+            <p className="mt-1 text-sm text-gray-600 italic">{services.find(s => s.id === selectedService)?.description}</p>
+          )}
         </div>
         
+        {/* Material Selection - only shown if the selected service has materials */}
+        {selectedService && materialOptions.length > 0 && (
+          <div className="mb-4">
+            <label htmlFor="material" className="block mb-2 font-semibold text-gray-900">Select Materials</label>
+            <div className="relative">
+              <select
+                id="material"
+                value={selectedMaterial}
+                onChange={handleMaterialChange}
+                className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 cursor-pointer bg-white text-black"
+              >
+                <option value="">No materials needed</option>
+                {materialOptions.map((material) => (
+                  <option key={material.name} value={material.name} className="text-black">
+                    {material.name} - ${material.price}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Price Summary */}
         {serviceDetails && (
-          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded">
-            <p className="font-semibold text-gray-900">Estimated time: {serviceDetails.estimatedTime}</p>
-            <p className="font-semibold text-gray-900">Price: ${serviceDetails.price.toFixed(2)} hourly</p>
-            <p className="mt-1 text-sm italic text-yellow-600">
-              Note: If the service takes longer than estimated, additional charges may apply.
+          <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded">
+            <h4 className="font-medium text-gray-900 mb-2">Price Summary</h4>
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-gray-700">Service Fee:</span>
+                <span className="text-gray-900">${serviceDetails.price.toFixed(2)}</span>
+              </div>
+              
+              {materialName && materialPrice > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Materials ({materialName}):</span>
+                  <span className="text-gray-900">${materialPrice.toFixed(2)}</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between font-bold pt-2 border-t border-gray-200 mt-2">
+                <span>Total:</span>
+                <span>${totalPrice.toFixed(2)}</span>
+              </div>
+            </div>
+            <p className="mt-2 text-sm italic text-black">
+              Note: Service will take approximately {serviceDetails.estimatedTime}. If the service takes longer than this time limit, additional charges may apply.
             </p>
           </div>
         )}
         
         {/* Date Selection */}
         <div className="mb-4">
-          <label className="block mb-2 font-semibold text-gray-900">Select Date</label>
-          <select 
-            id="date-select"
-            value={selectedDate}
-            onChange={handleDateChange}
-            className="w-full p-2 border border-gray-300 rounded cursor-pointer bg-white text-gray-900 font-medium"
-          >
-            <option value="">Choose a date...</option>
-            {availableDates.map((date, index) => (
-              <option key={index} value={date}>{date}</option>
-            ))}
-          </select>
+          <label className="block mb-2 font-semibold text-gray-900">Select Date*</label>
+          <div className="relative">
+            <select 
+              id="date-select"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 cursor-pointer bg-white text-black"
+              required
+            >
+              <option value="">Choose a date...</option>
+              {availableDates.map((date, index) => (
+                <option key={index} value={date} className="text-black">{date}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </div>
         </div>
         
         {/* Time Selection */}
         {selectedDate && (
           <div className="mb-4">
-            <label htmlFor="time-select" className="block mb-2 font-semibold text-gray-900">Select Time</label>
-            <select 
-              id="time-select"
-              value={selectedTime}
-              onChange={handleTimeChange}
-              className="w-full p-2 border border-gray-300 rounded cursor-pointer bg-white text-gray-900 font-medium"
-            >
-              <option value="" className="text-gray-900">Choose a time...</option>
-              {availableSlots.map((time, index) => (
-                <option key={index} value={time} className="text-gray-900">{time}</option>
-              ))}
-            </select>
+            <label htmlFor="time-select" className="block mb-2 font-semibold text-gray-900">Select Time*</label>
+            <div className="relative">
+              <select 
+                id="time-select"
+                value={selectedTime}
+                onChange={handleTimeChange}
+                className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 cursor-pointer bg-white text-black"
+                required
+              >
+                <option value="">Choose a time...</option>
+                {availableTimes.map((time, index) => (
+                  <option key={index} value={time} className="text-black">{time}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
           </div>
         )}
         
