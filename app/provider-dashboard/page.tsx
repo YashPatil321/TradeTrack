@@ -101,7 +101,7 @@ function ProviderDashboardContent() {
             <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg">
               <h2 className="text-xl font-bold text-yellow-800 mb-2">Not a Service Provider</h2>
               <p className="text-yellow-700">
-                You don't have any services registered as a provider. To view this dashboard, 
+                You don&apos;t have any services registered as a provider. To view this dashboard, 
                 you need to create a service first.
               </p>
               <Link 
@@ -116,7 +116,7 @@ function ProviderDashboardContent() {
               <div className="text-5xl text-gray-300 mb-4 mx-auto"><FaClipboardList /></div>
               <h2 className="text-2xl font-bold text-black mb-2">No Bookings Yet</h2>
               <p className="text-gray-600 mb-6">
-                You don't have any client bookings for your services yet.
+                You don&apos;t have any client bookings for your services yet.
               </p>
               <Link 
                 href="/services/create" 
