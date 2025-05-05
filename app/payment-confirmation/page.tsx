@@ -114,7 +114,7 @@ function PaymentConfirmation() {
               Thank you for your payment! Your booking for handyman services has been confirmed.
             </p>
             <p className="text-gray-600 mb-2">
-              <strong>What's next?</strong>
+              <strong>What&apos;s next?</strong>
             </p>
             <ul className="list-disc pl-5 mb-4 text-gray-600">
               <li>You will receive a confirmation email with your receipt and booking details.</li>
@@ -125,7 +125,7 @@ function PaymentConfirmation() {
         ) : (
           <div className="text-left mb-6">
             <p className="text-red-700 mb-4">
-              We're sorry, but your payment could not be processed at this time.
+              We&apos;re sorry, but your payment could not be processed at this time.
             </p>
             <p className="text-gray-600 mb-2">
               <strong>Possible reasons:</strong>

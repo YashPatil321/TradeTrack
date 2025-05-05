@@ -44,7 +44,7 @@ function ProviderDashboardContent() {
     } else if (status === "authenticated") {
       fetchBookings();
     }
-  }, [status, router]);
+  }, [status, router, fetchBookings]);
 
   async function fetchBookings() {
     try {
