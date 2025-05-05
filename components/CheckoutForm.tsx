@@ -26,7 +26,8 @@ export default function CheckoutForm({
   addressInfo,
   validateAddress,
   date,
-  time
+  time,
+  userEmail
 }: { 
   serviceId: string;
   serviceName: string;
@@ -36,12 +37,14 @@ export default function CheckoutForm({
   validateAddress: () => boolean;
   date?: string;
   time?: string;
+  userEmail?: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
+  // Initialize email with userEmail from props if available
+  const [email, setEmail] = useState(userEmail || '');
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -178,23 +181,31 @@ export default function CheckoutForm({
       <div className="mb-4">
         <div className="p-4 bg-gray-50 rounded-md mb-4">
           <h3 className="text-lg font-medium mb-2 text-gray-800">Price</h3>
-          <p className="text-3xl font-bold text-green-600">${amount.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-gray-800">${amount.toFixed(2)}</p>
         </div>
       </div>
       
       <div className="mb-4">
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email address
+          Email address {userEmail ? '(auto-filled from your account)' : ''}
         </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email address"
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
+        {userEmail ? (
+          // Read-only email field when pre-filled from session
+          <div className="w-full p-3 border border-gray-200 bg-gray-50 rounded-md text-gray-700">
+            {email}
+          </div>
+        ) : (
+          // Editable email field when not pre-filled
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email address"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        )}
       </div>
       
       <div className="mb-6">
@@ -252,7 +263,7 @@ export default function CheckoutForm({
       {message && (
         <div className={`mt-4 p-4 rounded-md ${
           message.includes('succeeded') 
-            ? 'bg-green-100 text-green-700'
+            ? 'bg-gray-100 text-gray-800'
             : 'bg-red-100 text-red-700'
         }`}>
           {message}

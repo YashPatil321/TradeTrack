@@ -164,7 +164,7 @@ function ServiceDetailsContent() {
                     {items.map((serviceItem, index) => (
                       <div key={index} className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-center mb-2">
-                          <h3 className="text-lg font-semibold text-black">{serviceItem.service}</h3>
+                          <h3 className="text-lg font-semibold text-black w-3/5 truncate">{serviceItem.service}</h3>
                           <div className="text-lg font-bold text-black">
                             {serviceItem.materialName ? (
                               <>${serviceItem.totalPrice} flat rate <span className="text-black font-normal">({serviceItem.timeLimit})</span></>
