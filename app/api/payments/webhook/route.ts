@@ -1,17 +1,13 @@
 // app/api/payments/webhook/route.ts
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import stripe from '@/lib/stripe';
 import dbConnect from '@/lib/dbConnect';
 import Transaction from '@/models/Transaction';
 
 // Configure runtime for edge compatibility
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
