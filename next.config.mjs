@@ -30,6 +30,14 @@ const nextConfig = {
   // Configuring image domains
   images: {
     domains: ['example.com'], // Update with the domains you plan to use
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/api/images/**',
+      },
+    ],
   },
 
   // Internationalization configuration
