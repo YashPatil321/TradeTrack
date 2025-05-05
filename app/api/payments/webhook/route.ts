@@ -6,6 +6,8 @@ import dbConnect from "../../../../lib/dbConnect";
 import Transaction from "../../../../models/Transaction";
 
 // Disable Next.js body parsing since we need the raw body for Stripe signature verification
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 export const config = {
   api: {
     bodyParser: false,
