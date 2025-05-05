@@ -68,12 +68,12 @@ export default function PayNowButton({ serviceId, className = '' }: PayNowButton
     if (selectedDate && serviceId) {
       fetchBookedTimeSlots(selectedDate);
     }
-  }, [selectedDate, serviceId]);
+  }, [selectedDate, serviceId, fetchBookedTimeSlots]);
 
   // Calculate total amount when service or material changes
   useEffect(() => {
     setTotalAmount(serviceRate + materialPrice);
-  }, [serviceRate, materialPrice]);
+  }, [serviceRate, materialPrice, fetchServiceDetails]);
 
   // Fetch booked time slots for a specific date
   const fetchBookedTimeSlots = async (date: string) => {

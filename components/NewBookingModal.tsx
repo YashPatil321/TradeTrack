@@ -323,9 +323,8 @@ export default function NewBookingModal({ service, isOpen, onCloseAction }: Book
 
   // Update total price when material price changes
   useEffect(() => {
-    if (serviceDetails) {
-      setTotalPrice(serviceDetails.price + materialPrice);
-    }
+    if (!serviceDetails) return;
+    setTotalPrice(serviceDetails.price + materialPrice);
   }, [materialPrice, serviceDetails]);
 
   const handleProceedToPayment = () => {
