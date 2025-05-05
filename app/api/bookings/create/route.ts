@@ -3,31 +3,72 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/dbConnect';
 import { google } from 'googleapis';
-import { createTransport } from 'nodemailer';
 
-// Configure Google OAuth for email sending
-async function getGoogleOAuthAccessToken() {
-  const OAuth2 = google.auth.OAuth2;
-  const oauth2Client = new OAuth2(
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET,
-    'https://developers.google.com/oauthplayground' // Redirect URL
-  );
-
-  oauth2Client.setCredentials({
-    refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-  });
-
-  const accessToken = await new Promise((resolve, reject) => {
-    oauth2Client.getAccessToken((err, token) => {
-      if (err) {
-        reject('Failed to create access token: ' + err.message);
-      }
-      resolve(token);
+/**
+ * Send an email using the Gmail API
+ * This is the exact same implementation used in the email test page
+ */
+async function sendEmail(to: string, subject: string, htmlContent: string) {
+  try {
+    console.log(`Sending email to ${to} with subject "${subject}"`);
+    
+    // Configure Gmail API client for each email send to ensure fresh credentials
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.EMAIL_CLIENT_ID,
+      process.env.EMAIL_CLIENT_SECRET,
+      'https://developers.google.com/oauthplayground'
+    );
+    
+    // Set credentials with refresh token
+    oauth2Client.setCredentials({
+      refresh_token: process.env.GOOGLE_REFRESH_TOKEN
     });
-  });
+    
+    // Create Gmail API instance
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  return accessToken;
+    // Create the email with proper headers and black text styling
+    const emailContent = [
+      'Content-Type: text/html; charset=utf-8',
+      'MIME-Version: 1.0',
+      `To: ${to}`,
+      'From: "TradeTrack" <' + process.env.EMAIL_USER + '>',
+      `Subject: ${subject}`,
+      '',
+      htmlContent
+    ].join('\n');
+
+    // Encode the email for the Gmail API
+    const encodedMessage = Buffer.from(emailContent)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    console.log('Sending email with Gmail API...');
+    // Send the email
+    const result = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw: encodedMessage
+      }
+    });
+
+    console.log('Email sent successfully, message ID:', result.data.id);
+    return result.data.id;
+  } catch (error: any) {
+    console.error('Error sending email:', error);
+    
+    // More detailed error logging for debugging
+    if (error.response) {
+      console.error('API response error:', {
+        status: error.response.status,
+        data: error.response.data
+      });
+    }
+    
+    throw error;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -87,72 +128,102 @@ export async function POST(req: NextRequest) {
     const savedBooking = await new Booking(booking).save();
 
     // Fetch the service provider's email
+    console.log('Finding service with ID:', serviceId);
     const service = await Service.findById(serviceId);
-    const providerEmail = service?.email || service?.userId;
+    console.log('Service found:', service ? 'Yes' : 'No');
+    
+    // Extract email from service or use userEmail field
+    const providerEmail = service?.email || service?.userEmail;
+    console.log('Provider email found:', providerEmail);
 
-    // Send email notification to the service provider if we have their email
+    // Format common booking details for emails
+    const formattedAddress = `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}, ${address.city}, ${address.state} ${address.zipCode}`;
+    const formattedDate = address.date ? new Date(address.date).toLocaleDateString() : 'Not specified';
+    const formattedTime = address.time || 'Not specified';
+    const additionalNotes = address.serviceNotes || 'None provided';
+    
+    // 1. Send email notification to the SERVICE PROVIDER if we have their email
     if (providerEmail) {
-      // Format the address for the email
-      const formattedAddress = `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}, ${address.city}, ${address.state} ${address.zipCode}`;
+      console.log('Sending booking notification email to service provider:', providerEmail);
       
-        // Format date and time if available (using different variable names to avoid redeclaration)
-      const formattedDate = address.date ? new Date(address.date).toLocaleDateString() : 'Not specified';
-      const formattedTime = address.time || 'Not specified';
-      
-      console.log('Email sending to:', providerEmail);
-
       try {
-        console.log('Starting email sending process with Google OAuth...');
-        console.log('Provider email:', providerEmail);
-        
-        // Get Google OAuth access token
-        console.log('Getting OAuth access token...');
-        const accessToken = await getGoogleOAuthAccessToken();
-        
-        // Create transporter with OAuth
-        const transporter = createTransport({
-          service: 'gmail',
-          auth: {
-            type: 'OAuth2',
-            user: process.env.EMAIL_USER,
-            clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-            clientSecret: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET,
-            refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-            accessToken: accessToken as string,
-          },
-        });
-        
-        console.log('Created OAuth transporter successfully');
-
-        console.log('Created transporter, attempting to send email...');
-        // Send email
-        const info = await transporter.sendMail({
-          from: process.env.EMAIL_USER || 'notifications@tradetrack.com',
-          to: providerEmail,
-          subject: `New Booking: ${serviceName}`,
-          html: `
-            <h1>New Service Booking</h1>
-            <p>You have a new booking for ${serviceName}!</p>
-            <h2>Booking Details:</h2>
-            <ul>
+        // Create service provider email content with black text per user preference
+        const providerEmailSubject = `New Booking: ${serviceName}`;
+        const providerEmailContent = `
+          <div style="font-family: Arial, sans-serif; color: #333;">
+            <h1 style="color: #333;">New Service Booking</h1>
+            <p style="color: #333;">You have a new booking for ${serviceName}!</p>
+            <h2 style="color: #333;">Booking Details:</h2>
+            <ul style="color: #333;">
               <li><strong>Service:</strong> ${serviceName}</li>
               <li><strong>Date:</strong> ${formattedDate}</li>
               <li><strong>Time:</strong> ${formattedTime}</li>
               <li><strong>Amount:</strong> $${amount.toFixed(2)}</li>
               <li><strong>Customer Email:</strong> ${email}</li>
               <li><strong>Service Address:</strong> ${formattedAddress}</li>
-              ${address.serviceNotes ? `<li><strong>Additional Notes:</strong> ${address.serviceNotes}</li>` : ''}
+              <li><strong>Additional Instructions:</strong> ${additionalNotes}</li>
             </ul>
-            <p>Please contact the customer directly if you need any clarification or have questions about this booking.</p>
-            <p>Thank you for using TradeTrack!</p>
-          `,
-        });
+            <p style="color: #333;">Please contact the customer directly if you need any clarification or have questions about this booking.</p>
+            <p style="color: #333;">You can view all your bookings in your <a href="${process.env.NEXTAUTH_URL}/provider-dashboard" style="color: #0066cc;">Provider Dashboard</a>.</p>
+            <p style="color: #333;">Thank you for using TradeTrack!</p>
+          </div>
+        `;
         
-        console.log('Email sent successfully:', info.messageId);
-      } catch (emailError) {
-        console.error('Error sending email:', emailError);
-        // Continue execution even if email fails
+        // Send provider email using Gmail API
+        const providerMessageId = await sendEmail(providerEmail, providerEmailSubject, providerEmailContent);
+        console.log('Provider notification email sent successfully, ID:', providerMessageId);
+      } catch (providerEmailError: any) {
+        console.error('======== PROVIDER EMAIL ERROR ========');
+        console.error('Error sending provider email:', providerEmailError.message);
+        if (providerEmailError.response) {
+          console.error('API response error:', {
+            status: providerEmailError.response.status,
+            data: providerEmailError.response.data
+          });
+        }
+        console.error('=========================================');
+        // Continue execution even if provider email fails
       }
+    }
+    
+    // 2. Send confirmation email to the CUSTOMER
+    try {
+      console.log('Sending booking confirmation email to customer:', email);
+      
+      const customerEmailSubject = `Your Booking Confirmation: ${serviceName}`;
+      const customerEmailContent = `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h1 style="color: #333;">Booking Confirmation</h1>
+          <p style="color: #333;">Thank you for booking ${serviceName} through TradeTrack!</p>
+          <h2 style="color: #333;">Your Booking Details:</h2>
+          <ul style="color: #333;">
+            <li><strong>Service:</strong> ${serviceName}</li>
+            <li><strong>Date:</strong> ${formattedDate}</li>
+            <li><strong>Time:</strong> ${formattedTime}</li>
+            <li><strong>Amount Paid:</strong> $${amount.toFixed(2)}</li>
+            <li><strong>Service Address:</strong> ${formattedAddress}</li>
+            <li><strong>Your Additional Instructions:</strong> ${additionalNotes}</li>
+          </ul>
+          <p style="color: #333;">The service provider has been notified and will contact you if they have any questions.</p>
+          <p style="color: #333;">You can view all your bookings in your <a href="${process.env.NEXTAUTH_URL}/profile" style="color: #0066cc;">Profile Dashboard</a>.</p>
+          <p style="color: #333;">Thank you for using TradeTrack!</p>
+        </div>
+      `;
+      
+      // Send customer email using Gmail API
+      const customerMessageId = await sendEmail(email, customerEmailSubject, customerEmailContent);
+      console.log('Customer confirmation email sent successfully, ID:', customerMessageId);
+    } catch (customerEmailError: any) {
+      console.error('======== CUSTOMER EMAIL ERROR ========');
+      console.error('Error sending customer email:', customerEmailError.message);
+      if (customerEmailError.response) {
+        console.error('API response error:', {
+          status: customerEmailError.response.status,
+          data: customerEmailError.response.data
+        });
+      }
+      console.error('=========================================');
+      // Continue execution even if customer email fails
     }
 
     return NextResponse.json({ 

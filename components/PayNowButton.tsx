@@ -43,9 +43,11 @@ export default function PayNowButton({ serviceId, className = '' }: PayNowButton
   const [serviceRate, setServiceRate] = useState(0);
   const [materialPrice, setMaterialPrice] = useState(0);
   const [materialName, setMaterialName] = useState('');
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [bookedTimeSlots, setBookedTimeSlots] = useState<string[]>([]);
 
-  // Time slots for booking
-  const timeSlots = [
+  // All possible time slots
+  const allTimeSlots = [
     '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', 
     '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
   ];
@@ -54,14 +56,58 @@ export default function PayNowButton({ serviceId, className = '' }: PayNowButton
   useEffect(() => {
     if (showModal) {
       fetchServiceDetails();
+      // Reset date and time selections when opening modal
+      setSelectedDate('');
+      setSelectedTime('');
+      setAvailableTimeSlots([]);
     }
   }, [showModal]);
+  
+  // Fetch booked time slots when a date is selected
+  useEffect(() => {
+    if (selectedDate && serviceId) {
+      fetchBookedTimeSlots(selectedDate);
+    }
+  }, [selectedDate, serviceId]);
 
   // Calculate total amount when service or material changes
   useEffect(() => {
     setTotalAmount(serviceRate + materialPrice);
   }, [serviceRate, materialPrice]);
 
+  // Fetch booked time slots for a specific date
+  const fetchBookedTimeSlots = async (date: string) => {
+    try {
+      // Fetch bookings for this service on the selected date
+      const response = await fetch(`/api/services/${serviceId}/bookings?date=${date}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Extract booked time slots
+        const booked = data.bookings.map((booking: any) => booking.time);
+        setBookedTimeSlots(booked);
+        
+        // Filter out booked time slots
+        const available = allTimeSlots.filter(time => !booked.includes(time));
+        setAvailableTimeSlots(available);
+        
+        // If the currently selected time is now booked, reset it
+        if (booked.includes(selectedTime)) {
+          setSelectedTime('');
+        }
+      } else {
+        // If error or no bookings found, all slots are available
+        setBookedTimeSlots([]);
+        setAvailableTimeSlots([...allTimeSlots]);
+      }
+    } catch (error) {
+      console.error('Error fetching booked time slots:', error);
+      // On error, assume all slots are available
+      setBookedTimeSlots([]);
+      setAvailableTimeSlots([...allTimeSlots]);
+    }
+  };
+  
   // Fetch service details from API
   const fetchServiceDetails = async () => {
     setLoading(true);
@@ -138,32 +184,38 @@ export default function PayNowButton({ serviceId, className = '' }: PayNowButton
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedService || !selectedDate || !selectedTime) {
-      alert('Please fill in all required fields');
       return;
     }
     
-    // Navigate to payment page with booking details
-    const queryParams = new URLSearchParams({
-      serviceId: serviceId,
-      service: selectedService,
+    // Find the selected service details
+    const service = serviceOptions.find(s => s.id === selectedService);
+    if (!service) return;
+    
+    // Calculate total amount
+    const amount = serviceRate + materialPrice;
+    
+    // Prepare payment data
+    const paymentData = {
+      serviceId,
+      serviceName: service.name,
+      amount,
+      selectedService,
+      selectedMaterial,
       date: selectedDate,
       time: selectedTime,
-      price: totalAmount.toString(),
-      notes: notes
-    });
+      additionalInstructions: notes, // Store the additional instructions
+      serviceNotes: notes, // Also include as serviceNotes for the API
+    };
     
-    // Add material info if selected
-    if (selectedMaterial) {
-      queryParams.append('materialName', materialName);
-      queryParams.append('materialPrice', materialPrice.toString());
-    }
+    // Store payment details in localStorage for later use
+    localStorage.setItem('pendingBooking', JSON.stringify(paymentData));
     
-    router.push(`/payment?${queryParams.toString()}`);
-    setShowModal(false);
+    // Navigate to payment page
+    router.push(`/payment?service=${serviceId}`);
   };
 
   // Get tomorrow's date as the default minimum date for booking
@@ -281,7 +333,7 @@ export default function PayNowButton({ serviceId, className = '' }: PayNowButton
                           required
                         >
                           <option value="">-- Select a time --</option>
-                          {timeSlots.map(time => (
+                          {availableTimeSlots.map((time: string) => (
                             <option key={time} value={time}>{time}</option>
                           ))}
                         </select>

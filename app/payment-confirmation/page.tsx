@@ -77,11 +77,11 @@ function PaymentConfirmation() {
         {isPaymentSuccessful ? (
           <>
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-green-800 mb-4">Payment Successful!</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Payment Successful!</h1>
           </>
         ) : (
           <>
@@ -110,7 +110,7 @@ function PaymentConfirmation() {
 
         {isPaymentSuccessful ? (
           <div className="text-left mb-6">
-            <p className="text-green-700 mb-4">
+            <p className="text-gray-700 mb-4">
               Thank you for your payment! Your booking for handyman services has been confirmed.
             </p>
             <p className="text-gray-600 mb-2">

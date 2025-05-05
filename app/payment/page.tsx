@@ -27,12 +27,17 @@ function PaymentPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [amount, setAmount] = useState<number>(priceString ? parseFloat(priceString) : 75);
+  
+  // Pre-fill address from saved profile if available
   const [addressLine1, setAddressLine1] = useState<string>('');
   const [addressLine2, setAddressLine2] = useState<string>('');
   const [city, setCity] = useState<string>('');
   const [state, setState] = useState<string>('');
   const [zipCode, setZipCode] = useState<string>('');
   const [addressError, setAddressError] = useState<string>('');
+  
+  // Use the user's email from their session - no need to re-enter
+  const [userEmail, setUserEmail] = useState<string>('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -49,6 +54,14 @@ function PaymentPageContent() {
     }
   }, [serviceId, serviceName, status]);
 
+  // Set user email from session when authenticated
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.email) {
+      setUserEmail(session.user.email);
+      console.log('Auto-filled email from session:', session.user.email);
+    }
+  }, [status, session]);
+  
   // Process service info and create payment intent
   useEffect(() => {
     if (status !== 'authenticated' || loading === false) return;
@@ -296,6 +309,8 @@ function PaymentPageContent() {
             // Include date and time from the URL parameters
             date={serviceDate || ''}
             time={serviceTime || ''}
+            // Pass the user's email from their session
+            userEmail={userEmail}
             addressInfo={{
               addressLine1,
               addressLine2,

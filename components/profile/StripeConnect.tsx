@@ -137,11 +137,11 @@ export default function StripeConnect() {
           
           {accountStatus.chargesEnabled && accountStatus.payoutsEnabled && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
-              <p className="text-green-800">
+              <p className="text-gray-800">
                 <span className="font-medium">Your Stripe account is fully set up!</span> You can now receive payments 
                 for your handyman services directly to your bank account.
               </p>
-              <p className="text-green-700 mt-2 text-sm">
+              <p className="text-gray-700 mt-2 text-sm">
                 Visit the <a 
                   href="https://dashboard.stripe.com" 
                   target="_blank" 
