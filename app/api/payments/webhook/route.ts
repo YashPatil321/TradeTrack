@@ -1,97 +1,74 @@
 // app/api/payments/webhook/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
-import stripe from "../../../../lib/stripe";
+import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import Stripe from 'stripe';
 import dbConnect from "../../../../lib/dbConnect";
 import Transaction from "../../../../models/Transaction";
 
-// Disable Next.js body parsing since we need the raw body for Stripe signature verification
-export const runtime = 'edge';
+// Configure runtime for edge compatibility
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const bodyParser = false;
 
-// Helper function to create a buffer from the request stream
-async function buffer(req: NextRequest) {
-  const chunks: Uint8Array[] = [];
-  const reader = req.body?.getReader();
-  if (!reader) return new Uint8Array();
-  
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-04-30.basil',
+});
+
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+export async function POST(req: Request) {
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(new Uint8Array(value));
-    }
-    return new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0))
-      .set(chunks.reduce((acc, chunk, index, array) => {
-        acc.set(chunk, index === 0 ? 0 : array[index - 1].length);
-        return acc;
-      }, new Uint8Array()));
-  } catch (error) {
-    console.error("Error reading request body:", error);
-    return new Uint8Array();
-  }
-}
+    // Connect to database first
+    await dbConnect();
 
-export async function POST(req: NextRequest) {
-  await dbConnect();
-  
-  if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.error("Missing STRIPE_WEBHOOK_SECRET environment variable");
-    return NextResponse.json(
-      { error: "Webhook secret is not set" },
-      { status: 500 }
-    );
-  }
+    const body = await req.text();
+    const signature = headers().get('stripe-signature');
 
-  const sig = headers().get('stripe-signature');
-  if (!sig) {
-    return NextResponse.json(
-      { error: 'Missing Stripe signature' },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const body = await buffer(req);
-    if (!body) {
+    if (!signature) {
       return NextResponse.json(
-        { error: 'Empty request body' },
+        { error: 'No signature found in request' },
         { status: 400 }
       );
     }
 
-    const event = stripe.webhooks.constructEvent(
-      new TextDecoder().decode(body),
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err);
+      return NextResponse.json(
+        { error: 'Webhook signature verification failed' },
+        { status: 400 }
+      );
+    }
 
     // Handle the event
     switch (event.type) {
       case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object;
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log('PaymentIntent was successful:', paymentIntent.id);
         await handlePaymentSuccess(paymentIntent);
         break;
       case 'payment_intent.payment_failed':
-        const failedPaymentIntent = event.data.object;
-        await handlePaymentFailure(failedPaymentIntent);
+        const failedPayment = event.data.object as Stripe.PaymentIntent;
+        console.log('Payment failed:', failedPayment.id);
+        await handlePaymentFailure(failedPayment);
         break;
       default:
-        console.log(`Unhandled event type ${event.type}`);
+        console.log(`Unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error('Webhook Error:', err);
+    console.error('Error processing webhook:', err);
     return NextResponse.json(
-      { error: 'Webhook Error' },
-      { status: 400 }
+      { error: 'Webhook handler failed' },
+      { status: 500 }
     );
   }
 }
 
-async function handlePaymentSuccess(paymentIntent: any) {
+async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   try {
     const transaction = await Transaction.findOne({
       paymentIntentId: paymentIntent.id
@@ -110,10 +87,11 @@ async function handlePaymentSuccess(paymentIntent: any) {
     console.log('Payment succeeded:', paymentIntent.id);
   } catch (error) {
     console.error('Error handling payment success:', error);
+    throw error; // Re-throw to be caught by the main try-catch
   }
 }
 
-async function handlePaymentFailure(paymentIntent: any) {
+async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent) {
   try {
     const transaction = await Transaction.findOne({
       paymentIntentId: paymentIntent.id
@@ -132,5 +110,6 @@ async function handlePaymentFailure(paymentIntent: any) {
     console.log('Payment failed:', paymentIntent.id);
   } catch (error) {
     console.error('Error handling payment failure:', error);
+    throw error; // Re-throw to be caught by the main try-catch
   }
 }

@@ -50,6 +50,7 @@ const nextConfig = {
     defaultLocale: 'en',
   },
 
+  // Webpack configuration for client-side
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -63,7 +64,19 @@ const nextConfig = {
     return config;
   },
 
+  // Required packages for transpilation
   transpilePackages: ['google-auth-library'],
+
+  // Enable strict mode for better development experience
+  reactStrictMode: true,
+
+  // Configure build output
+  output: 'standalone',
+
+  // Configure experimental features
+  experimental: {
+    serverActions: true,
+  },
 };
 
 export default nextConfig;
