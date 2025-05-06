@@ -1,7 +1,7 @@
 // components/ImageUploader.tsx
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 
@@ -15,7 +15,22 @@ interface ImageUploaderProps {
 export default function ImageUploader({ onImageUploadedAction, currentImage, className = '' }: ImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<string | null>(currentImage || null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    // Clean up any existing preview URL
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+  }, [preview]);
+
+  useEffect(() => {
+    // Set initial preview from currentImage
+    if (currentImage) {
+      setPreview(currentImage);
+    }
+  }, [currentImage]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     // Reset error state
@@ -25,9 +40,15 @@ export default function ImageUploader({ onImageUploadedAction, currentImage, cla
     const file = acceptedFiles[0];
     if (!file) return;
 
-    // Create a preview URL
+    // Clean up any existing preview
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
+    // Create a new preview URL
     const previewUrl = URL.createObjectURL(file);
     setPreview(previewUrl);
+    setFile(file);
 
     // Start uploading
     setIsUploading(true);

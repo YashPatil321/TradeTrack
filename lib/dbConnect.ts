@@ -1,26 +1,19 @@
 // lib/dbConnect.ts
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI!;
 
 if (!MONGODB_URI) {
-  throw new Error("Missing MONGODB_URI environment variable");
-}
-
-interface MongooseCache {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
-}
-
-declare global {
-  var mongoose: MongooseCache | undefined;
+  throw new Error(
+    "Please define the MONGODB_URI environment variable in .env"
+  );
 }
 
 // Use a global variable to cache the connection
-let cached = global.mongoose as MongooseCache;
+let cached = (global as any).mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = (global as any).mongoose = { conn: null, promise: null };
 }
 
 async function dbConnect() {
@@ -31,47 +24,26 @@ async function dbConnect() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      connectTimeoutMS: 30000,
-      retryWrites: true,
-      retryReads: true,
-      maxPoolSize: 10,
-      minPoolSize: 5,
-      maxIdleTimeMS: 60000,
       family: 4,
-      ssl: true,
-      tls: true,
-      tlsAllowInvalidCertificates: false,
-      tlsAllowInvalidHostnames: false,
-      directConnection: false,
-      replicaSet: 'atlas-vjf3m1-shard-0',
-      authSource: 'admin',
     };
 
-    console.log('Attempting to connect to MongoDB...');
-    
-    cached.promise = mongoose.connect(MONGODB_URI!, opts)
-      .then((mongoose) => {
-        console.log('MongoDB connected successfully');
-        return mongoose;
-      })
-      .catch((error) => {
-        console.error('MongoDB connection error:', error);
-        console.error('Connection string:', MONGODB_URI?.replace(/\/\/[^:]+:[^@]+@/, '//<credentials>@'));
-        throw error;
-      });
+    // Create a new connection
+    cached.promise = mongoose.connect(MONGODB_URI, opts).catch((err) => {
+      console.error('MongoDB connection error:', err);
+      throw err;
+    });
   }
 
   try {
     cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    console.error('Failed to connect to MongoDB:', e);
-    throw e;
+    console.log('Connected to MongoDB');
+    return cached.conn;
+  } catch (err) {
+    console.error('MongoDB connection failed:', err);
+    throw err;
   }
-
-  return cached.conn;
 }
 
 // Handle connection errors

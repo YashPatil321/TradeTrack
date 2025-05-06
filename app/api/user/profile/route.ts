@@ -1,26 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import mongoose from 'mongoose';
+import User from '@/models/User';
 
-// Define a schema for user profiles if it doesn't exist already
-let Profile: mongoose.Model<any>;
+// POST handler for updating user profile
+export async function POST(req: NextRequest) {
+  try {
+    await dbConnect();
+    
+    const body = await req.json();
+    const { email } = body;
+    
+    if (!email) {
+      return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
+    }
+    
+    // Update the user document
+    const user = await User.findOneAndUpdate(
+      { email },
+      { 
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
 
-try {
-  // Try to get the existing model
-  Profile = mongoose.model('Profile');
-} catch {
-  // If it doesn't exist, create a new one
-  const ProfileSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true },
-    type: { type: String, enum: ['client', 'service_provider'], required: true },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
-  });
-  
-  Profile = mongoose.model('Profile', ProfileSchema);
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, user });
+  } catch (error: any) {
+    console.error('Error updating profile:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
 }
 
-// GET handler for retrieving a user profile
+// GET handler for retrieving user profile
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -30,40 +44,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
     }
     
-    const profile = await Profile.findOne({ email });
-    return NextResponse.json({ success: true, profile });
+    const user = await User.findOne({ email });
+    return NextResponse.json({ success: true, user });
   } catch (error: any) {
     console.error('Error fetching profile:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
-
-// POST handler for creating/updating a user profile
-export async function POST(req: NextRequest) {
-  try {
-    await dbConnect();
-    
-    const body = await req.json();
-    const { email, type } = body;
-    
-    if (!email || !type) {
-      return NextResponse.json({ success: false, error: 'Email and type are required' }, { status: 400 });
-    }
-    
-    if (!['client', 'service_provider'].includes(type)) {
-      return NextResponse.json({ success: false, error: 'Type must be either client or service_provider' }, { status: 400 });
-    }
-    
-    // Find and update or create new profile
-    const profile = await Profile.findOneAndUpdate(
-      { email },
-      { email, type, updatedAt: Date.now() },
-      { upsert: true, new: true }
-    );
-    
-    return NextResponse.json({ success: true, profile });
-  } catch (error: any) {
-    console.error('Error creating/updating profile:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

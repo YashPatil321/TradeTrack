@@ -95,58 +95,66 @@ function Locator() {
     const initMap = () => {
       const mapElement = document.getElementById("map") as HTMLElement;
       if (!mapElement) return;
+      
+      // Create map with initial options
       const newMap = new window.google.maps.Map(mapElement, {
         zoom: 4,
         center: { lat: 39.8283, lng: -98.5795 },
+        disableDefaultUI: true,
+        styles: [
+          {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }]
+          }
+        ]
       });
+      
+      // Add zoom control
+      newMap.setOptions({
+        zoomControl: true,
+        zoomControlOptions: {
+          position: window.google.maps.ControlPosition.RIGHT_CENTER
+        }
+      });
+      
       setMap(newMap);
     };
 
-    if (!window.google || !window.google.maps) {
+    // Check if script is already loaded
+    if (window.google && window.google.maps) {
+      initMap();
+    } else {
+      // Load Google Maps script
       const script = document.createElement("script");
-      // Ensure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is set in your env variables
       script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
       script.async = true;
       script.defer = true;
       script.onload = initMap;
-      document.head.appendChild(script);
-      return () => {
-        document.head.removeChild(script);
-      };
-    } else {
-      initMap();
+      document.body.appendChild(script);
     }
   }, []);
 
-  // Update markers whenever map, services, or selectedTrade changes
+  // Create markers for services
   useEffect(() => {
-    if (!map) return;
+    if (!map || !services.length) return;
+
     // Clear existing markers
-    markers.forEach((marker) => marker.setMap(null));
+    markers.forEach(marker => marker.setMap(null));
+    setMarkers([]);
+
     const newMarkers: google.maps.Marker[] = [];
 
-    // Helper function: create marker for a service with an icon
-    const createMarker = (service: Service, location: { lat: number, lng: number, address?: string }, iconUrl: string) => {
+    const createMarker = (service: Service, location: { lat: number; lng: number; address: string }, iconUrl: string) => {
       const marker = new window.google.maps.Marker({
         position: { lat: location.lat, lng: location.lng },
-        map,
+        map: map,
+        icon: iconUrl,
         title: service.name,
-        icon: {
-          url: iconUrl,
-          scaledSize: new window.google.maps.Size(50, 50),
-        },
+        optimized: true,
+        animation: window.google.maps.Animation.DROP
       });
-      const infoWindow = new window.google.maps.InfoWindow({
-        content: `
-          <div style="padding:10px; max-width:200px; color:black;">
-            <img src="${service.image}" alt="${service.name}" style="width:100px; height:auto;" />
-            <h3>${service.name}</h3>
-            <p>Location: ${location.address || service.mainLocation || 'Address not specified'}</p>
-          </div>
-        `,
-      });
-      marker.addListener("mouseover", () => infoWindow.open(map, marker));
-      marker.addListener("mouseout", () => infoWindow.close());
+
       marker.addListener("click", () => {
         setSelectedService(service);
         setIsModalOpen(true);
@@ -154,73 +162,78 @@ function Locator() {
       newMarkers.push(marker);
     };
 
-    // Loop through each service and add markers
-    services.forEach((service) => {
-      // If a trade filter is active, only add markers for matching services
-      if (selectedTrade && service.trade !== selectedTrade) return;
+    // Create markers in batches to prevent flickering
+    const batchSize = 50;
+    for (let i = 0; i < services.length; i += batchSize) {
+      const batch = services.slice(i, i + batchSize);
       
-      let iconUrl = "";
-      switch (service.trade) {
-        case "plumber":
-          iconUrl = "/plumber.png";
-          break;
-        case "electrician":
-          iconUrl = "/electrician.png";
-          break;
-        case "handyman":
-          iconUrl = "/handyman.png";
-          break;
-        case "painter":
-          iconUrl = "/painter.png";
-          break;
-        case "food_truck":
-          iconUrl = "/truck.png";
-          break;
-        default:
-          iconUrl = "/default.png";
-      }
-      
-      // Check for service.location first (used by handyman services)
-      if (service.location && service.location.type === "Point" && Array.isArray(service.location.coordinates)) {
-        const lng = service.location.coordinates[0];
-        const lat = service.location.coordinates[1];
+      batch.forEach((service) => {
+        if (selectedTrade && service.trade !== selectedTrade) return;
         
-        if (typeof lat === "number" && typeof lng === "number" && lat !== 0 && lng !== 0) {
-          // Create a location object for the marker
-          const locationObj = {
-            lat,
-            lng,
-            address: service.mainLocation
-          };
-          createMarker(service, locationObj, iconUrl);
+        let iconUrl = "";
+        switch (service.trade) {
+          case "plumber":
+            iconUrl = "/plumber.png";
+            break;
+          case "electrician":
+            iconUrl = "/electrician.png";
+            break;
+          case "handyman":
+            iconUrl = "/handyman.png";
+            break;
+          case "painter":
+            iconUrl = "/painter.png";
+            break;
+          case "food_truck":
+            iconUrl = "/truck.png";
+            break;
+          default:
+            iconUrl = "/default.png";
         }
-      }
-      // Fall back to schedule if location is not available (for food trucks etc)
-      else if (Array.isArray(service.schedule)) {
-        service.schedule.forEach((slot) => {
-          if (
-            typeof slot.lat === "number" &&
-            typeof slot.lng === "number" &&
-            slot.lat !== 0 &&
-            slot.lng !== 0
-          ) {
-            // Create a location object from the schedule slot
+        
+        if (service.location && service.location.type === "Point" && Array.isArray(service.location.coordinates)) {
+          const lng = service.location.coordinates[0];
+          const lat = service.location.coordinates[1];
+          
+          if (typeof lat === "number" && typeof lng === "number" && lat !== 0 && lng !== 0) {
             const locationObj = {
-              lat: slot.lat,
-              lng: slot.lng,
-              address: slot.address
+              lat,
+              lng,
+              address: service.mainLocation
             };
             createMarker(service, locationObj, iconUrl);
-          } else {
-            console.warn(`Skipping invalid marker for ${service.name}`, slot);
           }
-        });
-      } else {
-        console.warn(`Service ${service.name} has neither location nor schedule data`);
+        }
+        else if (Array.isArray(service.schedule)) {
+          service.schedule.forEach((slot) => {
+            if (
+              typeof slot.lat === "number" &&
+              typeof slot.lng === "number" &&
+              slot.lat !== 0 &&
+              slot.lng !== 0
+            ) {
+              const locationObj = {
+                lat: slot.lat,
+                lng: slot.lng,
+                address: slot.address
+              };
+              createMarker(service, locationObj, iconUrl);
+            }
+          });
+        }
+      });
+      
+      // Process the batch
+      newMarkers.forEach(marker => marker.setMap(map));
+      
+      // Wait a bit before processing next batch
+      if (i + batchSize < services.length) {
+        setTimeout(() => {}, 100);
       }
-    });
+    }
+    
     setMarkers(newMarkers);
-  }, [map, services, selectedTrade, markers]);
+  }, [map, services, selectedTrade]);
 
   // "Search Near Me" functionality: recenter map on user's location
   const searchNearMe = () => {
