@@ -256,7 +256,7 @@ function Locator() {
                 Welcome, <span className="text-blue-400">{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
               </Link>
             ) : (
-              <Link href="/profile" className="text-white hover:text-gray-300">List Your Service</Link>
+              <Link href="/profile" className="text-white hover:text-gray-300">Login</Link>
             )}
           </div>
         </div>
