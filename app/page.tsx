@@ -429,9 +429,7 @@ function Locator() {
                   </li>
                   {selectedService.trade === "handyman" && (
                     <>
-                      <li className="mb-1 text-gray-900">
-                        <strong>Services:</strong> {selectedService.skillsAndServices}
-                      </li>
+                      {/* Removed the redundant services line that was showing skillsAndServices */}
                       <li className="mb-1 text-gray-900">
                         <strong>Services:</strong> 
                         {selectedService.services && selectedService.services.length > 0 ? (
