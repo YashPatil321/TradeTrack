@@ -34,7 +34,7 @@ export default function ImageUploader({ onImageUploadedAction, currentImage, cla
 
   // In your ImageUploader component
   const handleDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
       // Reset error state
       setError(null);
       
@@ -85,11 +85,11 @@ export default function ImageUploader({ onImageUploadedAction, currentImage, cla
         setIsUploading(false);
       }
     },
-    [onImageChange, preview] // Add preview to dependency array
+    [onImageUploadedAction, preview] // Fixed dependency array
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: handleDrop,
     accept: {
       'image/jpeg': [],
       'image/png': [],
