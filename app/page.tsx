@@ -139,11 +139,15 @@ function Locator() {
   useEffect(() => {
     if (!map || !services.length) return;
 
+    console.log("Creating markers with selected trade:", selectedTrade);
+    console.log("Total services:", services.length);
+
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
     setMarkers([]);
 
     const newMarkers: google.maps.Marker[] = [];
+    let filteredCount = 0;
 
     const createMarker = (service: Service, location: { lat: number; lng: number; address: string }, iconUrl: string, iconSize: google.maps.Size) => {
       const marker = new window.google.maps.Marker({
@@ -172,6 +176,7 @@ function Locator() {
       
       batch.forEach((service) => {
         if (selectedTrade && service.trade !== selectedTrade) return;
+        filteredCount++;
         
         let iconUrl = "";
         let iconSize = new window.google.maps.Size(30, 30); // Default size for most icons
@@ -185,7 +190,7 @@ function Locator() {
             break;
           case "handyman":
             iconUrl = "/handyman.png";
-            iconSize = new window.google.maps.Size(24, 24); // Smaller size for handyman
+            iconSize = new window.google.maps.Size(48, 48); // Increased from 36x36 to 48x48
             break;
           case "painter":
             iconUrl = "/painter.png";
@@ -237,6 +242,8 @@ function Locator() {
         setTimeout(() => {}, 100);
       }
     }
+    
+    console.log("Filtered services displayed:", filteredCount);
     
     setMarkers(newMarkers);
   }, [map, services, selectedTrade]);
