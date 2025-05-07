@@ -144,8 +144,7 @@ function Locator() {
 
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
-    setMarkers([]);
-
+    
     const newMarkers: google.maps.Marker[] = [];
     let filteredCount = 0;
 
@@ -246,7 +245,7 @@ function Locator() {
     console.log("Filtered services displayed:", filteredCount);
     
     setMarkers(newMarkers);
-  }, [map, services, selectedTrade]);
+  }, [map, services, selectedTrade]); // Correctly removed markers from dependency array
 
   // "Search Near Me" functionality: recenter map on user's location
   const searchNearMe = () => {
