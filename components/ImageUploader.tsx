@@ -32,57 +32,61 @@ export default function ImageUploader({ onImageUploadedAction, currentImage, cla
     }
   }, [currentImage]);
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    // Reset error state
-    setError(null);
-    
-    // Only process the first file
-    const file = acceptedFiles[0];
-    if (!file) return;
-
-    // Clean up any existing preview
-    if (preview) {
-      URL.revokeObjectURL(preview);
-    }
-
-    // Create a new preview URL
-    const previewUrl = URL.createObjectURL(file);
-    setPreview(previewUrl);
-    setFile(file);
-
-    // Start uploading
-    setIsUploading(true);
-
-    try {
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', file);
+  // In your ImageUploader component
+  const handleDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      // Reset error state
+      setError(null);
       
-      console.log('Uploading file:', file.name);
-      
-      // Send the request to the new endpoint
-      const response = await fetch('/api/upload-image', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-      console.log('Upload result:', result);
-
-      if (!result.success) {
-        setError(result.error || 'Upload failed');
-        return;
+      // Only process the first file
+      const file = acceptedFiles[0];
+      if (!file) return;
+  
+      // Clean up any existing preview
+      if (preview) {
+        URL.revokeObjectURL(preview);
       }
-
-      // Call the callback with the URL
-      onImageUploadedAction(result.url);
-    } catch (err) {
-      console.error('Upload error:', err);
-      setError('An error occurred during upload');
-    } finally {
-      setIsUploading(false);
-    }
-  }, [onImageUploadedAction]);
+  
+      // Create a new preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setPreview(previewUrl);
+      setFile(file);
+  
+      // Start uploading
+      setIsUploading(true);
+  
+      try {
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        console.log('Uploading file:', file.name);
+        
+        // Send the request to the new endpoint
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
+  
+        const result = await response.json();
+        console.log('Upload result:', result);
+  
+        if (!result.success) {
+          setError(result.error || 'Upload failed');
+          return;
+        }
+  
+        // Call the callback with the URL
+        onImageUploadedAction(result.url);
+      } catch (err) {
+        console.error('Upload error:', err);
+        setError('An error occurred during upload');
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [onImageChange, preview] // Add preview to dependency array
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
