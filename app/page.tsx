@@ -145,11 +145,14 @@ function Locator() {
 
     const newMarkers: google.maps.Marker[] = [];
 
-    const createMarker = (service: Service, location: { lat: number; lng: number; address: string }, iconUrl: string) => {
+    const createMarker = (service: Service, location: { lat: number; lng: number; address: string }, iconUrl: string, iconSize: google.maps.Size) => {
       const marker = new window.google.maps.Marker({
         position: { lat: location.lat, lng: location.lng },
         map: map,
-        icon: iconUrl,
+        icon: {
+          url: iconUrl,
+          scaledSize: iconSize
+        },
         title: service.name,
         optimized: true,
         animation: window.google.maps.Animation.DROP
@@ -171,6 +174,8 @@ function Locator() {
         if (selectedTrade && service.trade !== selectedTrade) return;
         
         let iconUrl = "";
+        let iconSize = new window.google.maps.Size(30, 30); // Default size for most icons
+        
         switch (service.trade) {
           case "plumber":
             iconUrl = "/plumber.png";
@@ -180,6 +185,7 @@ function Locator() {
             break;
           case "handyman":
             iconUrl = "/handyman.png";
+            iconSize = new window.google.maps.Size(24, 24); // Smaller size for handyman
             break;
           case "painter":
             iconUrl = "/painter.png";
@@ -201,7 +207,7 @@ function Locator() {
               lng,
               address: service.mainLocation
             };
-            createMarker(service, locationObj, iconUrl);
+            createMarker(service, locationObj, iconUrl, iconSize);
           }
         }
         else if (Array.isArray(service.schedule)) {
@@ -217,7 +223,7 @@ function Locator() {
                 lng: slot.lng,
                 address: slot.address
               };
-              createMarker(service, locationObj, iconUrl);
+              createMarker(service, locationObj, iconUrl, iconSize);
             }
           });
         }
@@ -262,14 +268,22 @@ function Locator() {
         <div className="container mx-auto flex justify-between items-center p-2">
           <h1 className="text-xl font-bold">TradeTrack</h1>
           <div className="flex items-center space-x-4">
-            <Link href="/" className="text-white hover:text-gray-300">Locator</Link>
-            <Link href="/about" className="text-white hover:text-gray-300">About</Link>
+            <Link href="/" legacyBehavior>
+              <a className="text-white hover:text-gray-300">Locator</a>
+            </Link>
+            <Link href="/about" legacyBehavior>
+              <a className="text-white hover:text-gray-300">About</a>
+            </Link>
             {session ? (
-              <Link href="/profile" className="text-white hover:text-gray-300 text-sm">
-                Welcome, <span className="text-blue-400">{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
+              <Link href="/profile" legacyBehavior>
+                <a className="text-white hover:text-gray-300 text-sm">
+                  Welcome, <span className="text-blue-400">{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
+                </a>
               </Link>
             ) : (
-              <Link href="/profile" className="text-white hover:text-gray-300">Login</Link>
+              <Link href="/profile" legacyBehavior>
+                <a className="text-white hover:text-gray-300">Login</a>
+              </Link>
             )}
           </div>
         </div>

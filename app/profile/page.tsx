@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FaUser, FaTools, FaChartLine, FaHome, FaHistory, FaListAlt, FaSignOutAlt } from 'react-icons/fa';
-import { SessionProvider } from 'next-auth/react';
 import Link from 'next/link';
-import StripeConnect from "@/components/profile/StripeConnect";
 
 interface Service {
   _id: string;
@@ -38,7 +36,7 @@ interface Booking {
   time: string;
 }
 
-function ProfileContent() {
+export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -90,6 +88,35 @@ function ProfileContent() {
     }
   }, [status, router, session]);
 
+  // Handle profile type selection
+  const handleProfileTypeSelection = async (type: string) => {
+    if (!session?.user?.email) return;
+    
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: session.user.email,
+          profileType: type,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setProfileType(type);
+        setShowProfileSelection(false);
+      } else {
+        console.error('Error saving profile type:', data.error);
+      }
+    } catch (error) {
+      console.error('Error saving profile type:', error);
+    }
+  };
+
   // Fetch services and bookings data once authenticated
   useEffect(() => {
     async function fetchServices() {
@@ -136,11 +163,11 @@ function ProfileContent() {
       }
     }
 
-    if (status === "authenticated" && session?.user?.email) {
+    if (status === "authenticated" && session?.user?.email && !showProfileSelection) {
       fetchServices();
       fetchBookings();
     }
-  }, [status, session]);
+  }, [status, session, showProfileSelection]);
 
   const getTradeIcon = (trade: string) => {
     switch (trade) {
@@ -159,13 +186,100 @@ function ProfileContent() {
     }
   };
 
+  // Profile Selection UI
+  if (showProfileSelection) {
+    return (
+      <div className="min-h-screen" style={{ backgroundColor: "#f5d9bc" }}>
+        {/* Fixed Nav Bar */}
+        <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="text-xl font-bold">TradeTrack</div>
+            <ul className="flex space-x-4">
+              <li>
+                <Link href="/" legacyBehavior>
+                  <a className="hover:text-gray-300">Home</a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" legacyBehavior>
+                  <a className="hover:text-gray-300">About</a>
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </nav>
 
+        <div className="container mx-auto p-8 pt-24">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-6">Welcome to TradeTrack!</h2>
+            <p className="text-center text-gray-600 mb-6">
+              Please select how you want to use TradeTrack. You can always change this later.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div 
+                onClick={() => handleProfileTypeSelection('client')}
+                className={`border-2 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all ${profileType === 'client' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+              >
+                <div className="flex justify-center mb-4">
+                  <FaUser className="text-blue-500 w-10 h-10" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Client</h3>
+                <p className="text-sm text-gray-600">Book services from professionals</p>
+              </div>
+
+              <div 
+                onClick={() => handleProfileTypeSelection('provider')}
+                className={`border-2 rounded-lg p-6 text-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-all ${profileType === 'provider' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}
+              >
+                <div className="flex justify-center mb-4">
+                  <FaTools className="text-green-500 w-10 h-10" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Provider</h3>
+                <p className="text-sm text-gray-600">Offer professional services</p>
+              </div>
+
+              <div 
+                onClick={() => handleProfileTypeSelection('both')}
+                className={`border-2 rounded-lg p-6 text-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all ${profileType === 'both' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}`}
+              >
+                <div className="flex justify-center mb-4">
+                  <FaChartLine className="text-purple-500 w-10 h-10" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Both</h3>
+                <p className="text-sm text-gray-600">Book and offer services</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (status === "loading") {
     return (
       <div className="min-h-screen" style={{ backgroundColor: "#f5d9bc" }}>
+        {/* Fixed Nav Bar */}
+        <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="text-xl font-bold">TradeTrack</div>
+            <ul className="flex space-x-4">
+              <li>
+                <Link href="/" legacyBehavior>
+                  <a className="hover:text-gray-300">Home</a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" legacyBehavior>
+                  <a className="hover:text-gray-300">About</a>
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
         <div className="max-w-5xl mx-auto p-8 pt-24">
-          <div className="flex items-center justify-center min-h-screen pt-16">
+          <div className="flex items-center justify-center min-h-screen">
             <div className="animate-pulse flex space-x-4">
               <div className="rounded-full bg-gray-300 h-12 w-12"></div>
               <div className="flex-1 space-y-4 py-1">
@@ -174,7 +288,6 @@ function ProfileContent() {
                   <div className="h-4 bg-gray-300 rounded"></div>
                   <div className="h-4 bg-gray-300 rounded w-5/6"></div>
                 </div>
-                <div className="h-4 bg-gray-300 rounded w-5/6"></div>
               </div>
             </div>
           </div>
@@ -186,6 +299,30 @@ function ProfileContent() {
   // Main Profile UI
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f5d9bc" }}>
+      {/* Fixed Nav Bar */}
+      <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="text-xl font-bold">TradeTrack</div>
+          <ul className="flex space-x-4">
+            <li>
+              <Link href="/" legacyBehavior>
+                <a className="hover:text-gray-300">Home</a>
+              </Link>
+            </li>
+            <li>
+              <Link href="/about" legacyBehavior>
+                <a className="hover:text-gray-300">About</a>
+              </Link>
+            </li>
+            <li>
+              <Link href="/list_your_service" legacyBehavior>
+                <a className="hover:text-gray-300">List Your Service</a>
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
       <div className="max-w-5xl mx-auto p-8 pt-24">
         {/* Stripe Connect Success Message */}
         {stripeConnectSuccess && (
@@ -205,10 +342,10 @@ function ProfileContent() {
               <p className="text-gray-600">{session?.user?.email}</p>
               <p className="mt-2 text-gray-800">Profile Type: <span className="font-semibold capitalize">{profileType || 'Not set'}</span></p>
               <div className="flex mt-4 md:mt-0 space-x-3">
-                <Link href="/list_your_service">
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition">
+                <Link href="/list_your_service" legacyBehavior>
+                  <a className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition">
                     Add New Service
-                  </button>
+                  </a>
                 </Link>
                 <button
                   onClick={() => signOut()}
@@ -349,19 +486,5 @@ function ProfileContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function ProfilePage() {
-  return (
-    <SessionProvider>
-      <Suspense fallback={
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      }>
-        <ProfileContent />
-      </Suspense>
-    </SessionProvider>
   );
 }
