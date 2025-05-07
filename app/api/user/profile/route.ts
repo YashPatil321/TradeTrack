@@ -8,19 +8,25 @@ export async function POST(req: NextRequest) {
     await dbConnect();
     
     const body = await req.json();
-    const { email } = body;
+    const { email, profileType } = body;
     
     if (!email) {
       return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
     }
     
+    // Update the user document with profile type
+    const updateData: any = { updatedAt: new Date() };
+    
+    // Only add profileType if it's provided
+    if (profileType) {
+      updateData.profileType = profileType;
+    }
+    
     // Update the user document
     const user = await User.findOneAndUpdate(
       { email },
-      { 
-        updatedAt: new Date()
-      },
-      { new: true }
+      updateData,
+      { new: true, upsert: true } // Create if doesn't exist
     );
 
     if (!user) {
@@ -45,7 +51,17 @@ export async function GET(req: NextRequest) {
     }
     
     const user = await User.findOne({ email });
-    return NextResponse.json({ success: true, user });
+    
+    // Return profile information in a more structured way
+    return NextResponse.json({ 
+      success: true, 
+      profile: user ? {
+        type: user.profileType || null,
+        email: user.email,
+        name: user.name,
+        id: user._id
+      } : null 
+    });
   } catch (error: any) {
     console.error('Error fetching profile:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
