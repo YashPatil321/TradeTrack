@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSession, signOut, signIn, SessionProvider } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FaUser, FaTools, FaChartLine, FaHome, FaHistory, FaListAlt, FaSignOutAlt } from 'react-icons/fa';
@@ -475,7 +475,9 @@ function ProfileContent() {
 export default function ProfilePage() {
   return (
     <SessionProvider>
-      <ProfileContent />
+      <Suspense fallback={<div>Loading...</div>}>
+        <ProfileContent />
+      </Suspense>
     </SessionProvider>
   );
 }
