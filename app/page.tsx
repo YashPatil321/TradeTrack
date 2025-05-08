@@ -488,7 +488,7 @@ function Locator() {
           </div>
         )}
         
-        {/* Booking Modal */}
+        {/* Booking Modasl */}
         {isBookingModalOpen && selectedService && (
           <NewBookingModal
             service={selectedService}
