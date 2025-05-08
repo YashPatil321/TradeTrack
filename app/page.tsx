@@ -245,7 +245,8 @@ function Locator() {
     console.log("Filtered services displayed:", filteredCount);
     
     setMarkers(newMarkers);
-  }, [map, services, selectedTrade]); // Correctly removed markers from dependency array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, services, selectedTrade]); // Intentionally excluding markers to avoid infinite loop
 
   // "Search Near Me" functionality: recenter map on user's location
   const searchNearMe = () => {
