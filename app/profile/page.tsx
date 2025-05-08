@@ -64,7 +64,7 @@ function ProfileContent() {
     }
   }, [searchParams, router]);
 
-  // Redirect to login if unauthenticated
+  // Redirect to login if unauthenticatedasdsad
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
