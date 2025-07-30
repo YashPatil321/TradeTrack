@@ -24,7 +24,7 @@ export default function CheckoutForm({
   amount,
   description,
   addressInfo,
-  validateAddress,
+  validateAddressAction,
   date,
   time,
   userEmail
@@ -34,7 +34,7 @@ export default function CheckoutForm({
   amount: number;
   description: string;
   addressInfo: AddressInfo;
-  validateAddress: () => boolean;
+  validateAddressAction: () => boolean;
   date?: string;
   time?: string;
   userEmail?: string;
@@ -92,7 +92,7 @@ export default function CheckoutForm({
     }
     
     // First validate the service address
-    if (!validateAddress()) {
+    if (!validateAddressAction()) {
       return;
     }
 

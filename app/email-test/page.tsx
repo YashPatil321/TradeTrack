@@ -6,8 +6,8 @@ import Link from 'next/link';
 export default function EmailTestPage() {
   const [formData, setFormData] = useState({
     to: '',
-    subject: 'Test Email from TradeTrack',
-    message: 'This is a test email from the TradeTrack application.'
+    subject: 'Test Email from TradersTap',
+    message: 'This is a test email from the TradersTap application.'
   });
   const [status, setStatus] = useState<{
     type: 'idle' | 'loading' | 'success' | 'error';

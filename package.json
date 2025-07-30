@@ -1,5 +1,5 @@
 {
-  "name": "trucktrack",
+  "name": "traderstap",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,6 +13,7 @@
     "@stripe/react-stripe-js": "^3.6.0",
     "@stripe/stripe-js": "^7.2.0",
     "@types/uuid": "^10.0.0",
+    "framer-motion": "^12.10.4",
     "google-auth-library": "^9.14.0",
     "google-spreadsheet": "^4.1.4",
     "googleapis": "^143.0.0",
@@ -34,12 +35,14 @@
     "@types/google.maps": "^3.58.1",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.21",
     "eslint": "^8",
     "eslint-config-next": "14.2.6",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2"
   }
 }

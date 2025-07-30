@@ -4,6 +4,8 @@ import dbConnect from "../../../lib/dbConnect";
 import Service from "../../../models/Service";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../lib/auth";
+import { getAllServices, getAllCategories } from "@/app/utils/serviceData";
+import mongoose from "mongoose";
 
 // Get all services
 export async function GET(req: NextRequest) {
@@ -11,13 +13,34 @@ export async function GET(req: NextRequest) {
     // Connect to MongoDB
     await dbConnect();
     
-    // Fetch services from database
-    const services = await Service.find({});
+    // Check if we should filter by provider
+    const url = new URL(req.url);
+    const providerOnly = url.searchParams.get('providerOnly') === 'true';
     
-    return NextResponse.json(
-      { success: true, data: services },
-      { status: 200 }
-    );
+    if (providerOnly) {
+      // Get the user session
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.email) {
+        return NextResponse.json(
+          { success: false, error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      
+      // Fetch only services created by this provider
+      const services = await Service.find({ userEmail: session.user.email });
+      return NextResponse.json(
+        { success: true, data: services },
+        { status: 200 }
+      );
+    } else {
+      // Fetch all services from database
+      const services = await Service.find({});
+      return NextResponse.json(
+        { success: true, data: services },
+        { status: 200 }
+      );
+    }
   } catch (error: any) {
     console.error("Error fetching services:", error);
     return NextResponse.json(
@@ -47,7 +70,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     
     // Validate trade type
-    const ALLOWED_TRADES = ["food_truck", "plumber", "electrician", "handyman", "painter"];
+    const ALLOWED_TRADES = ["plumber", "electrician", "handyman", "painter"];
     if (!body.trade || !ALLOWED_TRADES.includes(body.trade)) {
       return NextResponse.json(
         { 
@@ -56,6 +79,28 @@ export async function POST(req: NextRequest) {
         }, 
         { status: 400 }
       );
+    }
+    
+    // Validate service type against admin-defined categories if it's a handyman service
+    if (body.trade === "handyman" && body.serviceType) {
+      try {
+        // Get available service categories from admin-defined list
+        const availableServices = getAllServices();
+        const serviceExists = availableServices.some(service => service.id === body.serviceType);
+        
+        if (!serviceExists) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: `Invalid service type. Please select from the available services.` 
+            }, 
+            { status: 400 }
+          );
+        }
+      } catch (error) {
+        console.log("Warning: Could not validate against admin services", error);
+        // Continue even if validation fails (admin services might not be set up yet)
+      }
     }
     
     // Add the user's email to the service
@@ -82,6 +127,27 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json(
       { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// Get available service categories for handymen
+export async function OPTIONS(req: NextRequest) {
+  try {
+    // Get available categories from admin-defined list
+    const categories = getAllCategories();
+    const services = getAllServices();
+    
+    return NextResponse.json({
+      success: true,
+      categories,
+      services
+    });
+  } catch (error) {
+    console.error("Error fetching service categories:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch service categories" },
       { status: 500 }
     );
   }

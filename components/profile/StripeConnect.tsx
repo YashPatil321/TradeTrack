@@ -161,7 +161,7 @@ export default function StripeConnect() {
           </p>
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-md mb-4">
             <p className="text-blue-700 text-sm">
-              <span className="font-medium">How it works:</span> When customers pay for your services through TradeTrack, 
+              <span className="font-medium">How it works:</span> When customers pay for your services through TradersTap, 
               the money will be sent to your connected Stripe account. Stripe handles all the payment processing, 
               and you can transfer funds to your bank account at any time.
             </p>

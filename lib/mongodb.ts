@@ -6,6 +6,10 @@ if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable');
 }
 
+declare global {
+  var mongo: { conn: MongoClient | null; promise: Promise<MongoClient> | null };
+}
+
 let cached = global.mongo;
 
 if (!cached) {
@@ -18,16 +22,10 @@ export async function connectToDatabase() {
   }
 
   if (!cached.promise) {
-    const opts = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    };
+    const opts = {};
 
-    cached.promise = MongoClient.connect(MONGODB_URI, opts).then((client) => {
-      return {
-        client,
-        db: client.db(),
-      };
+    cached.promise = MongoClient.connect(MONGODB_URI!, opts).then((client) => {
+      return client;
     });
   }
   cached.conn = await cached.promise;

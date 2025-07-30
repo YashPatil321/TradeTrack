@@ -9,7 +9,16 @@ function LoginContent() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.push("/");
+      // Check if there's a pending booking to redirect back to
+      const pendingBooking = sessionStorage.getItem('pendingBooking');
+      if (pendingBooking) {
+        // Clear the pending booking from storage
+        sessionStorage.removeItem('pendingBooking');
+        // Redirect back to home page where the booking modal can be reopened
+        router.push('/?reopenBooking=true');
+      } else {
+        router.push("/");
+      }
     }
   }, [status, router]);
 

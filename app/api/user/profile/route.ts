@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     await dbConnect();
     
     const body = await req.json();
-    const { email } = body;
+    const { email, profileType } = body;
     
     if (!email) {
       return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
@@ -18,16 +18,17 @@ export async function POST(req: NextRequest) {
     const user = await User.findOneAndUpdate(
       { email },
       { 
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        type: profileType
       },
-      { new: true }
+      { new: true, upsert: true }
     );
 
     if (!user) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, user });
+    return NextResponse.json({ success: true, profile: user });
   } catch (error: any) {
     console.error('Error updating profile:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
     }
     
     const user = await User.findOne({ email });
-    return NextResponse.json({ success: true, user });
+    return NextResponse.json({ success: true, profile: user });
   } catch (error: any) {
     console.error('Error fetching profile:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
