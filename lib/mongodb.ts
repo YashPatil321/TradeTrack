@@ -7,18 +7,13 @@ if (!MONGODB_URI) {
 }
 
 declare global {
-  var mongo: { conn: MongoClient | null; promise: Promise<MongoClient> | null };
-}
-
-// Add type declaration for global mongo object
-declare global {
   var mongo: {
-    conn: any;
-    promise: Promise<any> | null;
-  } | undefined;
+    conn: MongoClient | null;
+    promise: Promise<MongoClient> | null;
+  };
 }
 
-// Define cached variable after the type declaration
+// Define cached variable
 let cached = global.mongo;
 
 if (!cached) {
@@ -26,7 +21,7 @@ if (!cached) {
 }
 
 export async function connectToDatabase() {
-  if (cached?.conn) {
+  if (cached.conn) {
     return cached.conn;
   }
 
@@ -36,13 +31,9 @@ export async function connectToDatabase() {
       useUnifiedTopology: true,
     };
 
-    cached.promise = MongoClient.connect(MONGODB_URI, opts).then((client) => {
-      return {
-        client,
-        db: client.db(),
-      };
-    });
+    cached.promise = MongoClient.connect(MONGODB_URI!);
   }
-  cached!.conn = await cached!.promise;
-  return cached!.conn;
+  
+  cached.conn = await cached.promise;
+  return cached.conn;
 }

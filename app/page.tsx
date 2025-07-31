@@ -519,7 +519,74 @@ function Locator() {
     }
     
     setMarkers(newMarkers);
-  }, [map, services, selectedTrade]);
+  }, [map, services, selectedTrade, selectionStep]);
+
+  // Handle category selection
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectionStep("service");
+    
+    // Map trade ID to the corresponding trade value
+    const tradeMap: Record<string, string> = {
+      "plumbing": "plumber",
+      "handyman": "handyman",
+      "electrician": "electrician",
+      "painting": "painter"
+    };
+    
+    setSelectedTrade(tradeMap[categoryId] || "");
+  };
+
+  // Handle specific service selection - updated for new service structure
+  const handleSpecificServiceSelect = (service: any) => {
+    // Create precise mapping from service names to booking modal IDs
+    const serviceNameToIdMap: { [key: string]: string } = {
+      // Handyman services
+      '15AMP Wall Outlet Upgrade Package': 'outlet-upgrade-package',
+      'Kitchen Faucet Replacement': 'kitchen-faucet-replacement',
+      'Angle Valve Replacement Service': 'angle-valve-replacement',
+      'Drywall Patch, Texture & Paint': 'drywall-patch-paint',
+      'Complete Toilet Replacement': 'toilet-replacement',
+      'Room LED Lighting with Channel': 'led-lighting-with-channel',
+      'Room LED Lighting (No Channel)': 'led-lighting-no-channel',
+      'House Lock Change Service': 'house-lock-change',
+      // Plumbing services
+      'Faucet Repair & Replacement': 'faucet-repair',
+      'Toilet Repair & Installation': 'toilet-repair',
+      'Drain Cleaning & Unclogging': 'drain-cleaning',
+      'Pipe Leak Detection & Repair': 'pipe-repair',
+      'Water Heater Service': 'water-heater-service',
+      // Electrical services
+      'Light Fixture & Switch Installation': 'light-fixture',
+      'Outlet Repair & Installation': 'outlet-repair',
+      'Ceiling Fan Installation': 'ceiling-fan',
+      'Electrical Panel Upgrades': 'panel-upgrade',
+      'Wiring & Circuit Installation': 'wiring-installation',
+      // Painting services
+      'Interior Painting': 'interior-painting',
+      'Exterior Painting': 'exterior-painting',
+      'Cabinet & Furniture Painting': 'cabinet-painting',
+      'Touch-up & Repair Painting': 'touch-up-painting',
+      'Wallpaper Removal & Installation': 'wallpaper-service'
+    };
+    
+    const serviceId = serviceNameToIdMap[service.name] || 'furniture-assembly';
+    console.log('Selected service:', service.name, '-> ID:', serviceId); // Debug log
+    setSelectedSpecificService(serviceId);
+    setSelectionStep("map");
+    setMapDimmed(false);
+    
+    // Search near user's location
+    searchNearMe();
+  };
+
+  // Reset selection process
+  const resetSelection = () => {
+    setSelectedCategory(null);
+    setSelectedSpecificService(null);
+    setSelectionStep("category");
+    setMapDimmed(true);
+  };
 
   // "Search Near Me" functionality: recenter map on user's location
   const searchNearMe = () => {

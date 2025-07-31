@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FaUser, FaTools, FaHistory, FaListAlt, FaSignOutAlt, FaCheckCircle } from 'react-icons/fa';
+import { FaUser, FaTools, FaHistory, FaListAlt, FaSignOutAlt, FaCheckCircle, FaChartLine } from 'react-icons/fa';
 import Link from 'next/link';
 import WelcomeScreen from '@/components/WelcomeScreen';
 
@@ -134,7 +134,7 @@ export default function ProfilePage() {
     if (status === "authenticated" && session?.user?.email) {
       fetchBookings();
     }
-  }, [status, session, showProfileSelection]);
+  }, [status, session]);
 
   const getTradeIcon = (trade: string) => {
     switch (trade) {
@@ -153,8 +153,8 @@ export default function ProfilePage() {
     }
   };
 
-  // Profile Selection UI
-  if (showProfileSelection) {
+  // Profile Selection UI (removed - client-only app)
+  if (false) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: "#f5d9bc" }}>
         {/* Fixed Nav Bar */}
@@ -270,7 +270,7 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-      </nav>
+      </div>
 
       <div className="max-w-5xl mx-auto p-8 pt-24">
         {/* Stripe Connect Success Message */}
@@ -280,81 +280,82 @@ export default function ProfilePage() {
           </div>
         )}
 
-      {/* User Profile Card */}
-      <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
-        <div className="flex flex-row items-start gap-6">
-          <div className="bg-gray-200 rounded-full p-4">
-            <FaUser className="w-10 h-10 text-gray-600" />
-          </div>
-          <div className="flex-1">
-            <p className="text-gray-600 mb-1">{session?.user?.email}</p>
-            <p className="text-gray-700">Profile Type: <span className="font-semibold">Client</span></p>
-            <div className="mt-2">
-              <button
-                onClick={() => signOut()}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm flex items-center"
-              >
-                <FaSignOutAlt className="mr-1" />
-                Sign Out
-              </button>
+        {/* User Profile Card */}
+        <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
+          <div className="flex flex-row items-start gap-6">
+            <div className="bg-gray-200 rounded-full p-4">
+              <FaUser className="w-10 h-10 text-gray-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-gray-600 mb-1">{session?.user?.email}</p>
+              <p className="text-gray-700">Profile Type: <span className="font-semibold">Client</span></p>
+              <div className="mt-2">
+                <button
+                  onClick={() => signOut()}
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                >
+                  <FaSignOutAlt className="mr-1" />
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* My Orders Section - Full Width */}
-      <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-8">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">My Orders</h2>
-              {isLoading ? (
-                <div className="animate-pulse space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-24 bg-gray-200 rounded"></div>
-                  ))}
-                </div>
-              ) : bookings.length > 0 ? (
-                <div className="space-y-4">
-                  {bookings.map((booking) => (
-                    <div key={booking._id} className="border rounded-lg p-4 hover:shadow-md transition">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-lg text-gray-900">{booking.serviceName || 'Service Booking'}</h3>
-                          <p className="text-sm text-gray-600 mt-1">Provider: {booking.providerName}</p>
-                          <p className="text-sm text-gray-600">Date: {new Date(booking.date).toLocaleDateString()} at {booking.time}</p>
-                          <p className="text-sm text-gray-600">Amount: ${(booking.amount || (booking as any).price || 0).toFixed ? (booking.amount || (booking as any).price || 0).toFixed(2) : '0.00'}</p>
-                          <p className="text-sm text-gray-600">Payment: {booking.paymentStatus || 'Pending'}</p>
-                          {(booking as any).clientInfo?.address && (
-                            <p className="text-sm text-gray-600">Service Address: {(booking as any).clientInfo.address}</p>
-                          )}
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          booking.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                          booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                        </span>
+        {/* My Orders Section - Full Width */}
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-8">
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">My Orders</h2>
+            {isLoading ? (
+              <div className="animate-pulse space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-24 bg-gray-200 rounded"></div>
+                ))}
+              </div>
+            ) : bookings.length > 0 ? (
+              <div className="space-y-4">
+                {bookings.map((booking) => (
+                  <div key={booking._id} className="border rounded-lg p-4 hover:shadow-md transition">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg text-gray-900">{booking.serviceName || 'Service Booking'}</h3>
+                        <p className="text-sm text-gray-600 mt-1">Provider: {booking.providerName}</p>
+                        <p className="text-sm text-gray-600">Date: {new Date(booking.date).toLocaleDateString()} at {booking.time}</p>
+                        <p className="text-sm text-gray-600">Amount: ${(booking.amount || (booking as any).price || 0).toFixed ? (booking.amount || (booking as any).price || 0).toFixed(2) : '0.00'}</p>
+                        <p className="text-sm text-gray-600">Payment: {booking.paymentStatus || 'Pending'}</p>
+                        {(booking as any).clientInfo?.address && (
+                          <p className="text-sm text-gray-600">Service Address: {(booking as any).clientInfo.address}</p>
+                        )}
                       </div>
-                      <div className="mt-4 pt-3 border-t border-gray-200">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Booking ID: {booking._id.slice(-8)}</span>
-                          <span className="text-sm font-medium text-gray-900">Pay in person when service is provided</span>
-                        </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        booking.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                        booking.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Booking ID: {booking._id.slice(-8)}</span>
+                        <span className="text-sm font-medium text-gray-900">Pay in person when service is provided</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">You haven't made any bookings yet.</p>
-                  <Link 
-                    href="/" 
-                    className="mt-4 inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition"
-                  >
-                    Browse Services
-                  </Link>
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">You haven't made any bookings yet.</p>
+                <Link 
+                  href="/" 
+                  className="mt-4 inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition"
+                >
+                  Browse Services
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
