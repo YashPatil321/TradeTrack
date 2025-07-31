@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendEmail } from '@/lib/emailService';
+import { sendEmail } from '../../../lib/emailService';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    console.log('🧪 Email test API called');
-
-    const { to, subject, message } = await req.json();
+    const { to, subject, message } = await request.json();
 
     if (!to || !subject || !message) {
       return NextResponse.json({ 
