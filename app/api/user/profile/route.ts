@@ -14,14 +14,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
     }
     
+    // Update the user document with profile type
+    const updateData: any = { updatedAt: new Date() };
+    
+    // Only add profileType if it's provided
+    if (profileType) {
+      updateData.profileType = profileType;
+    }
+    
     // Update the user document
     const user = await User.findOneAndUpdate(
       { email },
       { 
-        updatedAt: new Date(),
-        type: profileType
+        updatedAt: new Date()
       },
-      { new: true, upsert: true }
+      { new: true }
     );
 
     if (!user) {
@@ -46,7 +53,7 @@ export async function GET(req: NextRequest) {
     }
     
     const user = await User.findOne({ email });
-    return NextResponse.json({ success: true, profile: user });
+    return NextResponse.json({ success: true, user });
   } catch (error: any) {
     console.error('Error fetching profile:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

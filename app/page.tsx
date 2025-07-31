@@ -413,16 +413,14 @@ function Locator() {
   useEffect(() => {
     if (!map || !services.length) return;
 
+    console.log("Creating markers with selected trade:", selectedTrade);
+    console.log("Total services:", services.length);
+
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
     setMarkers([]);
 
-    // If we're still in selection mode, don't show markers
-    if (selectionStep !== "map") return;
-
     const newMarkers: google.maps.Marker[] = [];
-    const bounds = new window.google.maps.LatLngBounds();
-    let markersAdded = 0;
 
     const createMarker = (service: Service, location: { lat: number; lng: number; address: string }, iconUrl: string, iconSize: google.maps.Size) => {
       const marker = new window.google.maps.Marker({
@@ -445,166 +443,83 @@ function Locator() {
       });
       
       newMarkers.push(marker);
-      bounds.extend({ lat: location.lat, lng: location.lng });
-      markersAdded++;
     };
 
-    // Filter services based on selected trade
-    const filteredServices = services.filter(service => {
-      // Show all services when debugging
-      console.log('Filtering service:', service, 'Selected trade:', selectedTrade);
+    // Create markers in batches to prevent flickering
+    const batchSize = 50;
+    for (let i = 0; i < services.length; i += batchSize) {
+      const batch = services.slice(i, i + batchSize);
       
-      if (!selectedTrade) return true; // Show all if no trade selected for debugging
-      return service.trade === selectedTrade;
-    });
-
-    // Log all services to verify handyman providers
-    console.log('All available services:', services);
-    console.log('Filtered services to display:', filteredServices);
-    
-    // Create markers for filtered services
-    filteredServices.forEach((service) => {
-      let iconUrl = "";
-      let iconSize = new window.google.maps.Size(48, 48); // Increased from 30x30 to 48x48
-      
-      switch (service.trade) {
-        case "plumber":
-          iconUrl = "/plumber.png";
-          break;
-        case "electrician":
-          iconUrl = "/electrician.png";
-          break;
-        case "handyman":
-          iconUrl = "/handyman.png";
-          // Increased from 24x24 to 48x48 for consistency
-          break;
-        case "painter":
-          iconUrl = "/painter.png";
-          break;
-        default:
-          iconUrl = "/default.png";
-      }
-      
-      // More detailed logging for location data
-      console.log(`Processing location for service ${service.name} (${service.trade})`, {
-        hasLocation: !!service.location,
-        locationType: service.location?.type,
-        coordinates: service.location?.coordinates
-      });
-      
-      if (service.location && service.location.type === "Point" && Array.isArray(service.location.coordinates)) {
-        const lng = service.location.coordinates[0];
-        const lat = service.location.coordinates[1];
+      batch.forEach((service) => {
+        if (selectedTrade && service.trade !== selectedTrade) return;
         
-        if (typeof lat === "number" && typeof lng === "number" && lat !== 0 && lng !== 0) {
-          const locationObj = {
-            lat,
-            lng,
-            address: service.mainLocation
-          };
-          console.log(`Creating marker for ${service.name} at position:`, locationObj);
-          createMarker(service, locationObj, iconUrl, iconSize);
-        } else {
-          console.warn(`Invalid coordinates for ${service.name}: [${lng}, ${lat}]`);
+        let iconUrl = "";
+        let iconSize = new window.google.maps.Size(30, 30); // Default size for most icons
+        
+        switch (service.trade) {
+          case "plumber":
+            iconUrl = "/plumber.png";
+            break;
+          case "electrician":
+            iconUrl = "/electrician.png";
+            break;
+          case "handyman":
+            iconUrl = "/handyman.png";
+            iconSize = new window.google.maps.Size(24, 24); // Smaller size for handyman
+            break;
+          case "painter":
+            iconUrl = "/painter.png";
+            break;
+          case "food_truck":
+            iconUrl = "/truck.png";
+            break;
+          default:
+            iconUrl = "/default.png";
         }
-      } else if (Array.isArray(service.schedule)) {
-        service.schedule.forEach((slot) => {
-          if (
-            typeof slot.lat === "number" &&
-            typeof slot.lng === "number" &&
-            slot.lat !== 0 &&
-            slot.lng !== 0
-          ) {
+        
+        if (service.location && service.location.type === "Point" && Array.isArray(service.location.coordinates)) {
+          const lng = service.location.coordinates[0];
+          const lat = service.location.coordinates[1];
+          
+          if (typeof lat === "number" && typeof lng === "number" && lat !== 0 && lng !== 0) {
             const locationObj = {
-              lat: slot.lat,
-              lng: slot.lng,
-              address: slot.address
+              lat,
+              lng,
+              address: service.mainLocation
             };
             createMarker(service, locationObj, iconUrl, iconSize);
           }
-        });
-      }
-    });
-    
-    setMarkers(newMarkers);
-    
-    // Fit map to bounds if markers were added
-    if (markersAdded > 0) {
-      map.fitBounds(bounds);
+        }
+        else if (Array.isArray(service.schedule)) {
+          service.schedule.forEach((slot) => {
+            if (
+              typeof slot.lat === "number" &&
+              typeof slot.lng === "number" &&
+              slot.lat !== 0 &&
+              slot.lng !== 0
+            ) {
+              const locationObj = {
+                lat: slot.lat,
+                lng: slot.lng,
+                address: slot.address
+              };
+              createMarker(service, locationObj, iconUrl, iconSize);
+            }
+          });
+        }
+      });
       
-      // If only one marker, zoom in closer
-      if (markersAdded === 1) {
-        map.setZoom(14);
+      // Process the batch
+      newMarkers.forEach(marker => marker.setMap(map));
+      
+      // Wait a bit before processing next batch
+      if (i + batchSize < services.length) {
+        setTimeout(() => {}, 100);
       }
     }
-  }, [map, services, selectedTrade, selectionStep]);
-
-  // Handle category selection
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setSelectionStep("service");
     
-    // Map trade ID to the corresponding trade value
-    const tradeMap: Record<string, string> = {
-      "plumbing": "plumber",
-      "handyman": "handyman",
-      "electrician": "electrician",
-      "painting": "painter"
-    };
-    
-    setSelectedTrade(tradeMap[categoryId] || "");
-  };
-
-  // Handle specific service selection - updated for new service structure
-  const handleSpecificServiceSelect = (service: any) => {
-    // Create precise mapping from service names to booking modal IDs
-    const serviceNameToIdMap: { [key: string]: string } = {
-      // Handyman services
-      '15AMP Wall Outlet Upgrade Package': 'outlet-upgrade-package',
-      'Kitchen Faucet Replacement': 'kitchen-faucet-replacement',
-      'Angle Valve Replacement Service': 'angle-valve-replacement',
-      'Drywall Patch, Texture & Paint': 'drywall-patch-paint',
-      'Complete Toilet Replacement': 'toilet-replacement',
-      'Room LED Lighting with Channel': 'led-lighting-with-channel',
-      'Room LED Lighting (No Channel)': 'led-lighting-no-channel',
-      'House Lock Change Service': 'house-lock-change',
-      // Plumbing services
-      'Faucet Repair & Replacement': 'faucet-repair',
-      'Toilet Repair & Installation': 'toilet-repair',
-      'Drain Cleaning & Unclogging': 'drain-cleaning',
-      'Pipe Leak Detection & Repair': 'pipe-repair',
-      'Water Heater Service': 'water-heater-service',
-      // Electrical services
-      'Light Fixture & Switch Installation': 'light-fixture',
-      'Outlet Repair & Installation': 'outlet-repair',
-      'Ceiling Fan Installation': 'ceiling-fan',
-      'Electrical Panel Upgrades': 'panel-upgrade',
-      'Wiring & Circuit Installation': 'wiring-installation',
-      // Painting services
-      'Interior Painting': 'interior-painting',
-      'Exterior Painting': 'exterior-painting',
-      'Cabinet & Furniture Painting': 'cabinet-painting',
-      'Touch-up & Repair Painting': 'touch-up-painting',
-      'Wallpaper Removal & Installation': 'wallpaper-service'
-    };
-    
-    const serviceId = serviceNameToIdMap[service.name] || 'furniture-assembly';
-    console.log('Selected service:', service.name, '-> ID:', serviceId); // Debug log
-    setSelectedSpecificService(serviceId);
-    setSelectionStep("map");
-    setMapDimmed(false);
-    
-    // Search near user's location
-    searchNearMe();
-  };
-
-  // Reset selection process
-  const resetSelection = () => {
-    setSelectedCategory(null);
-    setSelectedSpecificService(null);
-    setSelectionStep("category");
-    setMapDimmed(true);
-  };
+    setMarkers(newMarkers);
+  }, [map, services, selectedTrade]);
 
   // "Search Near Me" functionality: recenter map on user's location
   const searchNearMe = () => {
@@ -877,35 +792,41 @@ animate={{ opacity: 1, y: 0 }}
                   <p className="text-gray-700 leading-relaxed">{selectedService.description}</p>
                 </div>
 
-                <div className="mb-6">
-                  <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900">Details</h3>
-                  <div className="space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-gray-100">
-                      <span className="font-medium text-gray-600">Type:</span>
-                      <span className="text-gray-900">{selectedService.trade === "food_truck" ? "Food Truck" : selectedService.trade.charAt(0).toUpperCase() + selectedService.trade.slice(1)}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-gray-100">
-                      <span className="font-medium text-gray-600">Service Area (Est 25mi):</span>
-                      <span className="text-gray-900">{selectedService.mainLocation || 'Local area'}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-gray-100">
-                      <span className="font-medium text-gray-600">Hours:</span>
-                      <span className="text-gray-900">{selectedService.hours}</span>
-                    </div>
-                    {selectedService.phoneNumber && (
-                      <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-gray-100">
-                        <span className="font-medium text-gray-600">Phone:</span>
-                        <span className="text-gray-900">{selectedService.phoneNumber}</span>
-                      </div>
-                    )}
-                    {selectedService.price && (
-                      <div className="flex flex-col sm:flex-row sm:justify-between py-2">
-                        <span className="font-medium text-gray-600">Starting Price:</span>
-                        <span className="text-gray-900 font-semibold">${selectedService.price} {selectedService.priceType ? `(${selectedService.priceType})` : ''}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">Details</h3>
+                <ul className="text-gray-900">
+                  <li className="mb-1 text-gray-900">
+                    <strong>Type:</strong> {selectedService.trade === "food_truck" ? "Food Truck" : selectedService.trade.charAt(0).toUpperCase() + selectedService.trade.slice(1)}
+                  </li>
+                  <li className="mb-1 text-gray-900">
+                    <strong>Location:</strong> {selectedService.mainLocation}
+                  </li>
+                  <li className="mb-1 text-gray-900">
+                    <strong>Hours:</strong> {selectedService.hours}
+                  </li>
+                  {selectedService.trade === "handyman" && (
+                    <>
+                      <li className="mb-1 text-gray-900">
+                        <strong>Services:</strong> {selectedService.skillsAndServices}
+                      </li>
+                      <li className="mb-1 text-gray-900">
+                        <strong>Services:</strong> 
+                        {selectedService.services && selectedService.services.length > 0 ? (
+                          <ul className="ml-4 list-disc">
+                            {selectedService.services.map((s: any, idx: number) => (
+                              <li key={idx} className="text-black">
+                                {s.service} - ${s.rate} flat rate ({s.timeLimit})
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span>General handyman services</span>
+                        )}
+                      </li>
+                    </>
+                  )}
+                </ul>
+              </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
                   {selectedService.trade === "handyman" || selectedService.trade === "plumber" || selectedService.trade === "electrician" || selectedService.trade === "painter" ? (
@@ -960,7 +881,7 @@ animate={{ opacity: 1, y: 0 }}
           </div>
         )}
         
-        {/* Booking Modal */}
+        {/* Booking Modasl */}
         {isBookingModalOpen && selectedService && (
           <NewBookingModal
             service={selectedService}

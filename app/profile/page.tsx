@@ -1,11 +1,11 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signOut, signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FaUser, FaTools, FaHistory, FaListAlt, FaSignOutAlt, FaCheckCircle } from 'react-icons/fa';
 import Link from 'next/link';
+import WelcomeScreen from '@/components/WelcomeScreen';
 
 interface Service {
   _id: string;
@@ -37,8 +37,7 @@ interface Booking {
   time: string;
 }
 
-// Create a wrapper component that uses SessionProvider
-function ProfileContent() {
+export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,7 +61,7 @@ function ProfileContent() {
     }
   }, [searchParams, router]);
 
-  // Redirect to login if unauthenticated
+  // Redirect to login if unauthenticatedasdsad
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -135,7 +134,94 @@ function ProfileContent() {
     if (status === "authenticated" && session?.user?.email) {
       fetchBookings();
     }
-  }, [status, session]);
+  }, [status, session, showProfileSelection]);
+
+  const getTradeIcon = (trade: string) => {
+    switch (trade) {
+      case "food_truck":
+        return "🍔";
+      case "plumber":
+        return "🔧";
+      case "electrician":
+        return "⚡";
+      case "handyman":
+        return "🔨";
+      case "painter":
+        return "🎨";
+      default:
+        return "📋";
+    }
+  };
+
+  // Profile Selection UI
+  if (showProfileSelection) {
+    return (
+      <div className="min-h-screen" style={{ backgroundColor: "#f5d9bc" }}>
+        {/* Fixed Nav Bar */}
+        <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="text-xl font-bold">TradeTrack</div>
+            <ul className="flex space-x-4">
+              <li>
+                <Link href="/" legacyBehavior>
+                  <a className="hover:text-gray-300">Home</a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" legacyBehavior>
+                  <a className="hover:text-gray-300">About</a>
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <div className="container mx-auto p-8 pt-24">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-6">Welcome to TradeTrack!</h2>
+            <p className="text-center text-gray-600 mb-6">
+              Please select how you want to use TradeTrack. You can always change this later.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div 
+                onClick={() => handleProfileTypeSelection('client')}
+                className={`border-2 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all ${profileType === 'client' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+              >
+                <div className="flex justify-center mb-4">
+                  <FaUser className="text-blue-500 w-10 h-10" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Client</h3>
+                <p className="text-sm text-gray-600">Book services from professionals</p>
+              </div>
+
+              <div 
+                onClick={() => handleProfileTypeSelection('provider')}
+                className={`border-2 rounded-lg p-6 text-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-all ${profileType === 'provider' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}
+              >
+                <div className="flex justify-center mb-4">
+                  <FaTools className="text-green-500 w-10 h-10" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Provider</h3>
+                <p className="text-sm text-gray-600">Offer professional services</p>
+              </div>
+
+              <div 
+                onClick={() => handleProfileTypeSelection('both')}
+                className={`border-2 rounded-lg p-6 text-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all ${profileType === 'both' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}`}
+              >
+                <div className="flex justify-center mb-4">
+                  <FaChartLine className="text-purple-500 w-10 h-10" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Both</h3>
+                <p className="text-sm text-gray-600">Book and offer services</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (status === "loading") {
     return (
@@ -184,15 +270,15 @@ function ProfileContent() {
             )}
           </div>
         </div>
-      </div>
-      
-      {/* Stripe Success Banner */}
-      {stripeConnectSuccess && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6">
-          <FaCheckCircle className="inline mr-2" />
-          <span className="block sm:inline">Successfully connected to Stripe! You can now receive payments.</span>
-        </div>
-      )}
+      </nav>
+
+      <div className="max-w-5xl mx-auto p-8 pt-24">
+        {/* Stripe Connect Success Message */}
+        {stripeConnectSuccess && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6">
+            <span className="block sm:inline">Successfully connected to Stripe! You can now receive payments.</span>
+          </div>
+        )}
 
       {/* User Profile Card */}
       <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
@@ -272,14 +358,5 @@ function ProfileContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-// Export the main component wrapped with SessionProvider
-export default function ProfilePage() {
-  return (
-    <SessionProvider>
-      <ProfileContent />
-    </SessionProvider>
   );
 }
