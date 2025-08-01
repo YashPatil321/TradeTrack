@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FaUser, FaTools, FaHistory, FaListAlt, FaSignOutAlt, FaCheckCircle, FaChartLine } from 'react-icons/fa';
@@ -37,7 +37,8 @@ interface Booking {
   time: string;
 }
 
-export default function ProfilePage() {
+// Component that uses useSearchParams - needs to be wrapped in Suspense
+function ProfileContent() {
   const sessionData = useSession();
   const session = sessionData?.data;
   const status = sessionData?.status;
@@ -341,5 +342,14 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main export with Suspense wrapper to fix useSearchParams deployment error
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <ProfileContent />
+    </Suspense>
   );
 }
