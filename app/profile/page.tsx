@@ -44,22 +44,7 @@ export default function ProfilePage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [profileType, setProfileType] = useState<string>('client');
-  const [stripeConnectSuccess, setStripeConnectSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
-
-  // Check if Stripe Connect is successful
-  useEffect(() => {
-    if (searchParams.get('success') === 'true') {
-      setStripeConnectSuccess(true);
-      
-      // Clear the URL parameters after 5 seconds
-      const timer = setTimeout(() => {
-        router.replace('/profile');
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [searchParams, router]);
 
   // Redirect to login if unauthenticatedasdsad
   useEffect(() => {
@@ -273,12 +258,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-5xl mx-auto p-8 pt-24">
-        {/* Stripe Connect Success Message */}
-        {stripeConnectSuccess && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6">
-            <span className="block sm:inline">Successfully connected to Stripe! You can now receive payments.</span>
-          </div>
-        )}
+
 
         {/* User Profile Card */}
         <div className="bg-white shadow-lg rounded-lg p-6 mb-8">

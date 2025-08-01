@@ -10,10 +10,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  stripeAccountId: {
-    type: String,
-    required: false,
-  },
   role: {
     type: String,
     enum: ['user', 'provider', 'admin'],
