@@ -3,7 +3,64 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
-import { getAllServices, getAllCategories, ServiceItem } from "../utils/serviceData";
+// Service data types and inline data
+interface ServiceItem {
+  id: string;
+  name: string;
+  category: string;
+  price?: string;
+  timeLimit?: string;
+  description?: string;
+}
+
+interface CategoryItem {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+// Inline service data to replace missing utils/serviceData
+const getAllServices = (): ServiceItem[] => [
+  { 
+    id: "tv-shelf-mounting", 
+    name: "TV & Shelf Mounting", 
+    category: "handyman",
+    price: "$85",
+    timeLimit: "2 hours",
+    description: "Professional TV mounting and shelf installation"
+  },
+  { 
+    id: "furniture-assembly", 
+    name: "Furniture Assembly", 
+    category: "handyman",
+    price: "$95",
+    timeLimit: "3 hours",
+    description: "Expert furniture assembly and setup"
+  },
+  { 
+    id: "picture-hanging", 
+    name: "Picture Hanging", 
+    category: "handyman",
+    price: "$65",
+    timeLimit: "1 hour",
+    description: "Professional picture and artwork hanging"
+  },
+  { 
+    id: "minor-repairs", 
+    name: "Minor Repairs", 
+    category: "handyman",
+    price: "$75",
+    timeLimit: "2 hours",
+    description: "Small household repairs and fixes"
+  }
+];
+
+const getAllCategories = (): CategoryItem[] => [
+  { id: "handyman", name: "Handyman Services", icon: "🔨" },
+  { id: "plumbing", name: "Plumbing", icon: "🔧" },
+  { id: "electrician", name: "Electrician Services", icon: "⚡" },
+  { id: "painting", name: "Painting Services", icon: "🎨" }
+];
 import Link from "next/link";
 import Image from "next/image";
 
@@ -38,7 +95,7 @@ function HandymanInputContent() {
       
       const categories = getAllCategories();
       if (categories.length > 0) {
-        setSelectedCategory(categories[0]);
+        setSelectedCategory(categories[0].id);
       }
     } catch (err) {
       console.error("Error loading services:", err);
@@ -301,16 +358,16 @@ function HandymanInputContent() {
                   <div className="flex flex-wrap gap-2">
                     {getAllCategories().map((category) => (
                       <button
-                        key={category}
+                        key={category.id}
                         type="button"
-                        onClick={() => setSelectedCategory(category)}
+                        onClick={() => setSelectedCategory(category.id)}
                         className={`px-4 py-2 rounded-full text-sm font-medium ${
-                          selectedCategory === category
+                          selectedCategory === category.id
                             ? "bg-blue-600 text-white"
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                         }`}
                       >
-                        {category}
+                        {category.name}
                       </button>
                     ))}
                   </div>
@@ -343,15 +400,15 @@ function HandymanInputContent() {
                             <h3 className="font-bold text-gray-800">{service.name}</h3>
                             <p className="text-sm text-gray-600">{service.description}</p>
                             <div className="mt-2 flex justify-between text-sm">
-                              <span className="text-blue-600 font-medium">${service.price.toFixed(2)}</span>
-                              <span className="text-gray-500">{service.timeLimit}</span>
+                              <span className="text-blue-600 font-medium">{service.price || 'Price TBD'}</span>
+                              <span className="text-gray-500">{service.timeLimit || 'Time TBD'}</span>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                  ))}
                 </div>
+              </div>
               </div>
               
               {/* Submit Button */}

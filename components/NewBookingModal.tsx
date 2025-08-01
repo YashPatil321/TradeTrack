@@ -253,10 +253,10 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
   useEffect(() => {
     if (!isOpen) return;
     
-    // Generate next 7 days
+    // Generate next 2 weeks (14 days)
     const dates = [];
     const today = new Date();
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 14; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       dates.push(date.toISOString().split('T')[0]);
@@ -390,8 +390,15 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
 
   // Handle booking submission
   const handleBookingSubmit = async () => {
-    if (!selectedService || !selectedDate || !selectedTime || !clientInfo.name || !clientInfo.address) {
-      alert('Please fill in all required fields.');
+    // Enhanced validation for all required fields
+    if (!selectedService || !selectedDate || !selectedTime || !clientInfo.name || !clientInfo.address || !clientInfo.email || !clientInfo.city || !clientInfo.zipCode) {
+      alert('Please fill in all required fields including email, city, and zip code.');
+      return;
+    }
+
+    // Validate session
+    if (!session?.user?.email) {
+      alert('Please log in to complete your booking.');
       return;
     }
 
@@ -403,40 +410,74 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
         ? parseFloat((serviceDetails.price as string).replace('$', '')) || 0
         : (serviceDetails.price as number) || 0;
         
+      // Validate price
+      if (!priceValue || priceValue <= 0) {
+        alert('Invalid service price. Please try again.');
+        setLoading(false);
+        return;
+      }
+        
+      // Ensure all required fields have values
+      const userEmail = session?.user?.email || clientInfo.email;
+      const customerEmail = clientInfo.email;
+      
       const bookingData = {
+        // Required fields from schema
+        userId: userEmail,
         serviceId: service._id,
         serviceName: serviceDetails.name,
-        serviceType: service.trade || 'handyman',
-        providerName: service.name,
+        amount: priceValue,
+        price: priceValue,
+        userEmail: userEmail,
+        customerEmail: customerEmail,
         date: selectedDate,
         time: selectedTime,
+        
+        // Service details
+        serviceType: service.trade || 'handyman',
+        providerName: service.name,
         estimatedTime: serviceDetails.duration,
-        serviceDuration: serviceDetails.durationHours, // Add explicit service duration in hours
-        price: priceValue,
-        amount: priceValue,
-        status: 'confirmed',
-        paymentStatus: 'pending',
-        paymentMethod: 'in-person',
-        // Client information (flattened)
+        serviceDuration: serviceDetails.durationHours || 1,
+        description: `${serviceDetails.name} - ${serviceDetails.description}`,
+        
+        // Client information
         clientName: clientInfo.name,
-        clientEmail: clientInfo.email,
-        clientPhone: clientInfo.phone,
-        specialInstructions: clientInfo.specialInstructions,
-        // Address information
+        clientPhone: clientInfo.phone || '',
+        clientEmail: customerEmail,
+        specialInstructions: clientInfo.specialInstructions || '',
+        
+        // Address information (required nested object)
         address: {
           addressLine1: clientInfo.address,
           addressLine2: '',
           city: clientInfo.city,
-          state: 'CA', // Default state
+          state: 'CA',
           zipCode: clientInfo.zipCode,
-          serviceNotes: clientInfo.specialInstructions
+          serviceNotes: clientInfo.specialInstructions || ''
         },
-        // Additional fields for compatibility
-        description: `${serviceDetails.name} - ${serviceDetails.description}`,
-        customerEmail: clientInfo.email
+        
+        // Status fields
+        status: 'confirmed',
+        paymentStatus: 'pending'
       };
       
-      console.log('Submitting booking data:', bookingData);
+      // Debug logging
+      console.log('=== BOOKING DEBUG ===');
+      console.log('Session user email:', session?.user?.email);
+      console.log('Client info:', clientInfo);
+      console.log('Service details:', serviceDetails);
+      console.log('Price value:', priceValue);
+      console.log('Final booking data:', bookingData);
+      console.log('Required field check:');
+      console.log('- userId:', bookingData.userId);
+      console.log('- userEmail:', bookingData.userEmail);
+      console.log('- customerEmail:', bookingData.customerEmail);
+      console.log('- amount:', bookingData.amount);
+      console.log('- address.addressLine1:', bookingData.address.addressLine1);
+      console.log('- address.city:', bookingData.address.city);
+      console.log('- address.state:', bookingData.address.state);
+      console.log('- address.zipCode:', bookingData.address.zipCode);
+      console.log('===================');
       
       const response = await fetch('/api/bookings', {
         method: 'POST',

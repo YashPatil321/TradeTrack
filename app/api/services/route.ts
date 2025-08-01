@@ -4,7 +4,6 @@ import dbConnect from "../../../lib/dbConnect";
 import Service from "../../../models/Service";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../lib/auth";
-import { getAllServices, getAllCategories } from "@/app/utils/serviceData";
 import mongoose from "mongoose";
 
 // Get all services
@@ -84,9 +83,12 @@ export async function POST(req: NextRequest) {
     // Validate service type against admin-defined categories if it's a handyman service
     if (body.trade === "handyman" && body.serviceType) {
       try {
-        // Get available service categories from admin-defined list
-        const availableServices = getAllServices();
-        const serviceExists = availableServices.some(service => service.id === body.serviceType);
+        // Basic validation for handyman service types
+        const validHandymanServices = [
+          'tv-shelf-mounting', 'furniture-assembly', 'picture-hanging', 'minor-repairs',
+          'outlet-installation', 'light-fixture', 'ceiling-fan', 'smart-device'
+        ];
+        const serviceExists = validHandymanServices.includes(body.serviceType);
         
         if (!serviceExists) {
           return NextResponse.json(
@@ -135,9 +137,20 @@ export async function POST(req: NextRequest) {
 // Get available service categories for handymen
 export async function OPTIONS(req: NextRequest) {
   try {
-    // Get available categories from admin-defined list
-    const categories = getAllCategories();
-    const services = getAllServices();
+    // Return predefined service categories
+    const categories = [
+      { id: "handyman", name: "Handyman Services", icon: "🔨" },
+      { id: "plumbing", name: "Plumbing", icon: "🔧" },
+      { id: "electrician", name: "Electrician Services", icon: "⚡" },
+      { id: "painting", name: "Painting Services", icon: "🎨" }
+    ];
+    
+    const services = [
+      { id: "tv-shelf-mounting", name: "TV & Shelf Mounting", category: "handyman" },
+      { id: "furniture-assembly", name: "Furniture Assembly", category: "handyman" },
+      { id: "picture-hanging", name: "Picture Hanging", category: "handyman" },
+      { id: "minor-repairs", name: "Minor Repairs", category: "handyman" }
+    ];
     
     return NextResponse.json({
       success: true,

@@ -65,50 +65,6 @@ interface Service {
 // Define service categories and their specific services with detailed descriptions and pricing
 const serviceCategories = [
   {
-    id: "plumbing",
-    name: "Plumbing",
-    icon: "🔧",
-    color: "#4299e1",
-    services: [
-      {
-        name: "Faucet Repair & Replacement",
-        description: "Complete faucet repair including cartridge replacement, seal fixes, and full faucet installation for kitchen and bathroom sinks",
-        price: "$85",
-        timeEstimate: "2 hours"
-      },
-      {
-        name: "Toilet Repair & Installation",
-        description: "Toilet troubleshooting, flapper replacement, fill valve repair, complete toilet removal and installation with wax ring",
-        price: "$120",
-        timeEstimate: "3 hours"
-      },
-      {
-        name: "Drain Cleaning & Unclogging",
-        description: "Professional drain cleaning using snakes and hydro-jetting for kitchen sinks, bathroom drains, and main sewer lines",
-        price: "$95",
-        timeEstimate: "2 hours"
-      },
-      {
-        name: "Pipe Leak Detection & Repair",
-        description: "Advanced leak detection using specialized equipment, pipe patching, joint repair, and emergency leak stopping",
-        price: "$110",
-        timeEstimate: "3 hours"
-      },
-      {
-        name: "Water Heater Service",
-        description: "Water heater maintenance, thermostat replacement, heating element repair, and complete tank or tankless installation",
-        price: "$150",
-        timeEstimate: "4 hours"
-      },
-      {
-        name: "Garbage Disposal Installation",
-        description: "Complete garbage disposal removal and installation including electrical connections, plumbing hookup, and testing",
-        price: "$130",
-        timeEstimate: "3 hours"
-      }
-    ]
-  },
-  {
     id: "handyman",
     name: "Handyman Services",
     icon: "🔨",
@@ -161,6 +117,50 @@ const serviceCategories = [
         description: "Professional lock and door knob replacement for up to 10 doors including closets and bathrooms. Customer provides locks",
         price: "$500",
         timeEstimate: "5 hours"
+      }
+    ]
+  },
+  {
+    id: "plumbing",
+    name: "Plumbing",
+    icon: "🔧",
+    color: "#4299e1",
+    services: [
+      {
+        name: "Faucet Repair & Replacement",
+        description: "Complete faucet repair including cartridge replacement, seal fixes, and full faucet installation for kitchen and bathroom sinks",
+        price: "$85",
+        timeEstimate: "2 hours"
+      },
+      {
+        name: "Toilet Repair & Installation",
+        description: "Toilet troubleshooting, flapper replacement, fill valve repair, complete toilet removal and installation with wax ring",
+        price: "$120",
+        timeEstimate: "3 hours"
+      },
+      {
+        name: "Drain Cleaning & Unclogging",
+        description: "Professional drain cleaning using snakes and hydro-jetting for kitchen sinks, bathroom drains, and main sewer lines",
+        price: "$95",
+        timeEstimate: "2 hours"
+      },
+      {
+        name: "Pipe Leak Detection & Repair",
+        description: "Advanced leak detection using specialized equipment, pipe patching, joint repair, and emergency leak stopping",
+        price: "$110",
+        timeEstimate: "3 hours"
+      },
+      {
+        name: "Water Heater Service",
+        description: "Water heater maintenance, thermostat replacement, heating element repair, and complete tank or tankless installation",
+        price: "$150",
+        timeEstimate: "4 hours"
+      },
+      {
+        name: "Garbage Disposal Installation",
+        description: "Complete garbage disposal removal and installation including electrical connections, plumbing hookup, and testing",
+        price: "$130",
+        timeEstimate: "3 hours"
       }
     ]
   },
@@ -454,7 +454,7 @@ function Locator() {
         if (selectedTrade && service.trade !== selectedTrade) return;
         
         let iconUrl = "";
-        let iconSize = new window.google.maps.Size(30, 30); // Default size for most icons
+        let iconSize = new window.google.maps.Size(45, 45); // Larger default size for better visibility
         
         switch (service.trade) {
           case "plumber":
@@ -465,7 +465,7 @@ function Locator() {
             break;
           case "handyman":
             iconUrl = "/handyman.png";
-            iconSize = new window.google.maps.Size(24, 24); // Smaller size for handyman
+            iconSize = new window.google.maps.Size(45, 45); // Consistent larger size for handyman
             break;
           case "painter":
             iconUrl = "/painter.png";
@@ -854,45 +854,31 @@ animate={{ opacity: 1, y: 0 }}
                   </div>
                 )}
 
-                <div className="mb-4">
-                  <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-900">About This Provider</h3>
-                  <p className="text-gray-700 leading-relaxed">{selectedService.description}</p>
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold mb-3 text-gray-900">Service Provider</h3>
+                  <p className="text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-lg">{selectedService.description}</p>
                 </div>
 
-              <div className="mb-4">
-                <h3 className="text-xl font-semibold mb-2 text-gray-900">Details</h3>
-                <ul className="text-gray-900">
-                  <li className="mb-1 text-gray-900">
-                    <strong>Type:</strong> {selectedService.trade === "food_truck" ? "Food Truck" : selectedService.trade.charAt(0).toUpperCase() + selectedService.trade.slice(1)}
-                  </li>
-                  <li className="mb-1 text-gray-900">
-                    <strong>Location:</strong> {selectedService.mainLocation}
-                  </li>
-                  <li className="mb-1 text-gray-900">
-                    <strong>Hours:</strong> {selectedService.hours}
-                  </li>
-                  {selectedService.trade === "handyman" && (
-                    <>
-                      <li className="mb-1 text-gray-900">
-                        <strong>Services:</strong> {selectedService.skillsAndServices}
-                      </li>
-                      <li className="mb-1 text-gray-900">
-                        <strong>Services:</strong> 
-                        {selectedService.services && selectedService.services.length > 0 ? (
-                          <ul className="ml-4 list-disc">
-                            {selectedService.services.map((s: any, idx: number) => (
-                              <li key={idx} className="text-black">
-                                {s.service} - ${s.rate} flat rate ({s.timeLimit})
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span>General handyman services</span>
-                        )}
-                      </li>
-                    </>
-                  )}
-                </ul>
+              <div className="mb-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Service Type</span>
+                    <span className="text-gray-900 font-medium capitalize">
+                      {selectedService.trade === "food_truck" ? "Food Truck" : selectedService.trade.charAt(0).toUpperCase() + selectedService.trade.slice(1)}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Service Area</span>
+                    <div className="text-right">
+                      <span className="text-gray-900 font-medium">{selectedService.mainLocation}</span>
+                      <div className="text-xs text-gray-500 mt-1">Coverage: ~25 mile radius</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Hours</span>
+                    <span className="text-gray-900 font-medium">{selectedService.hours}</span>
+                  </div>
+                </div>
               </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">

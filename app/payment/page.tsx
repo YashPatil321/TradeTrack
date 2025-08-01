@@ -324,7 +324,7 @@ function PaymentPageContent() {
               zipCode,
               serviceNotes: serviceNotes || ''
             }}
-            validateAddress={() => {
+            validateAddressAction={() => {
               if (!addressLine1 || !city || !state || !zipCode) {
                 setAddressError('Please fill in all required address fields');
                 return false;
