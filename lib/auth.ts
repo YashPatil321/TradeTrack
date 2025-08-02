@@ -29,10 +29,7 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
     async session({ session, token }) {
-      // Ensure session data is properly passed
-      if (token && session.user) {
-        session.user.id = token.sub;
-      }
+      // Return session as-is (NextAuth handles user data properly)
       return session;
     },
     async jwt({ token, account, profile }) {
