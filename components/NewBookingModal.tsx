@@ -105,7 +105,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
       
       // Close modal and redirect directly to Google OAuth
       onCloseAction();
-      window.location.href = '/api/auth/signin/google?callbackUrl=' + encodeURIComponent(window.location.origin + '/?reopenBooking=true');
+      window.location.href = '/api/auth/signin/google?callbackUrl=' + encodeURIComponent(window.location.origin);
       return;
     }
   }, [isOpen, status, service, selectedServiceType, onCloseAction, router]);

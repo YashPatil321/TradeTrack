@@ -9,22 +9,37 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   secret: process.env.AUTH_SECRET,
-  debug: process.env.NODE_ENV === "development",
+  session: {
+    strategy: "jwt",
+  },
   callbacks: {
     async signIn({ account, profile }) {
       return true;
     },
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
+      // Handle post-login redirects properly
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      // If it's the same origin, allow it
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      // Default to home page after login
       return baseUrl;
     },
     async session({ session, token }) {
+      // Ensure session data is properly passed
+      if (token && session.user) {
+        session.user.id = token.sub;
+      }
       return session;
     },
-    async jwt({ token, account }) {
+    async jwt({ token, account, profile }) {
+      // Persist user data in JWT
+      if (account && profile) {
+        token.id = profile.sub;
+      }
       return token;
     }
   }

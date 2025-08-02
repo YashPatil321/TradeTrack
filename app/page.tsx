@@ -284,28 +284,21 @@ function Locator() {
   const [selectedSpecificService, setSelectedSpecificService] = useState<string | null>(null);
   const [mapDimmed, setMapDimmed] = useState(true);
 
-  // Handle reopening booking modal after login
+  // Handle reopening booking modal after login - simplified approach
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('reopenBooking') === 'true') {
-      // Get stored booking data
-      const pendingBooking = sessionStorage.getItem('pendingBooking');
-      if (pendingBooking) {
-        try {
-          const bookingData = JSON.parse(pendingBooking);
-          // Find the service by ID
-          const service = services.find(s => s._id === bookingData.serviceId);
-          if (service) {
-            setSelectedService(service);
-            setSelectedSpecificService(bookingData.selectedServiceType);
-            setIsBookingModalOpen(true);
-          }
-          // Clear the URL parameter
-          window.history.replaceState({}, document.title, window.location.pathname);
-          sessionStorage.removeItem('pendingBooking');
-        } catch (error) {
-          console.error('Error parsing pending booking data:', error);
-        }
+    // Check if there's a stored service selection for booking
+    const selectedServiceForBooking = sessionStorage.getItem('selectedServiceForBooking');
+    if (selectedServiceForBooking && services.length > 0) {
+      // Find the service by the stored service type
+      const service = services.find(s => 
+        s.trade === 'handyman' || s.trade === 'plumber' || s.trade === 'electrician' || s.trade === 'painter'
+      );
+      if (service) {
+        setSelectedService(service);
+        setSelectedSpecificService(selectedServiceForBooking);
+        setIsBookingModalOpen(true);
+        // Clear the stored selection
+        sessionStorage.removeItem('selectedServiceForBooking');
       }
     }
   }, [services]);
@@ -909,8 +902,8 @@ animate={{ opacity: 1, y: 0 }}
                             selectedServiceType: serviceToBook
                           }));
                           sessionStorage.setItem('selectedServiceForBooking', serviceToBook);
-                          // Trigger Google OAuth directly
-                          window.location.href = '/api/auth/signin/google?callbackUrl=' + encodeURIComponent(window.location.origin + '/?reopenBooking=true');
+                          // Trigger Google OAuth directly - redirect to home page after login
+                          window.location.href = '/api/auth/signin/google?callbackUrl=' + encodeURIComponent(window.location.origin);
                         }}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm"
                         type="button"
