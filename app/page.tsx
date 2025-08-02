@@ -284,24 +284,11 @@ function Locator() {
   const [selectedSpecificService, setSelectedSpecificService] = useState<string | null>(null);
   const [mapDimmed, setMapDimmed] = useState(true);
 
-  // Handle reopening booking modal after login - simplified approach
+  // Clean up any stored booking selections after login (but don't auto-open modal)
   useEffect(() => {
-    // Check if there's a stored service selection for booking
-    const selectedServiceForBooking = sessionStorage.getItem('selectedServiceForBooking');
-    if (selectedServiceForBooking && services.length > 0) {
-      // Find the service by the stored service type
-      const service = services.find(s => 
-        s.trade === 'handyman' || s.trade === 'plumber' || s.trade === 'electrician' || s.trade === 'painter'
-      );
-      if (service) {
-        setSelectedService(service);
-        setSelectedSpecificService(selectedServiceForBooking);
-        setIsBookingModalOpen(true);
-        // Clear the stored selection
-        sessionStorage.removeItem('selectedServiceForBooking');
-      }
-    }
-  }, [services]);
+    // Clear any stored service selection to allow fresh start
+    sessionStorage.removeItem('selectedServiceForBooking');
+  }, []);
 
   // Fetch services from your backend API
   useEffect(() => {
@@ -607,7 +594,7 @@ function Locator() {
       <div className="fixed top-0 left-0 right-0 z-10 bg-black text-white shadow-md">
         <div className="container mx-auto flex justify-between items-center p-2">
           <Link href="/" legacyBehavior>
-            <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradersTap</a>
+            <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradesTap</a>
           </Link>
           <div className="flex items-center space-x-4">
             <Link href="/" legacyBehavior>
@@ -902,8 +889,8 @@ animate={{ opacity: 1, y: 0 }}
                             selectedServiceType: serviceToBook
                           }));
                           sessionStorage.setItem('selectedServiceForBooking', serviceToBook);
-                          // Use NextAuth's signIn function for proper redirect handling
-                          signIn('google', { callbackUrl: window.location.origin });
+                          // Use NextAuth's signIn function - let NextAuth handle redirect automatically
+                          signIn('google');
                         }}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm"
                         type="button"

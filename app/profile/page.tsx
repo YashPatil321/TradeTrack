@@ -239,7 +239,7 @@ function ProfileContent() {
       <div className="fixed top-0 left-0 right-0 z-10 bg-black text-white shadow-md">
         <div className="container mx-auto flex justify-between items-center p-2">
           <Link href="/" legacyBehavior>
-            <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradersTap</a>
+            <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradesTap</a>
           </Link>
           <div className="flex items-center space-x-4">
             <Link href="/" legacyBehavior>

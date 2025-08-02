@@ -790,7 +790,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
                     <h5 className="text-sm font-semibold text-blue-900 mb-2">Terms & Conditions</h5>
                     <p className="text-xs text-blue-800 mb-3 leading-relaxed">
-                      By booking this service, you acknowledge that: (1) All bookings are subject to service provider availability and confirmation; (2) You agree to pay the service provider directly upon completion of work; (3) TradersTap acts as a platform connecting clients with independent service providers; (4) Service quality, pricing, and completion are the responsibility of the individual service provider; (5) You may be contacted by the provider to confirm appointment details.
+                      By booking this service, you acknowledge that: (1) All bookings are subject to service provider availability and confirmation; (2) You agree to pay the service provider directly upon completion of work; (3) TradesTap acts as a platform connecting clients with independent service providers; (4) Service quality, pricing, and completion are the responsibility of the individual service provider; (5) You may be contacted by the provider to confirm appointment details.
                     </p>
                     
                     <label className="flex items-start space-x-3 cursor-pointer">

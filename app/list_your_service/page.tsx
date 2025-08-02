@@ -8,7 +8,7 @@ export default function ListYourService() {
       {/* Fixed Nav Bar */}
       <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 z-50 shadow-lg">
         <div className="container mx-auto flex items-center justify-between">
-          <div className="text-xl font-bold">TradersTap</div>
+          <div className="text-xl font-bold">TradesTap</div>
           <ul className="flex space-x-4">
             <li>
               <Link href="/" legacyBehavior>

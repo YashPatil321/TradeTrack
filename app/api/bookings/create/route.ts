@@ -32,7 +32,7 @@ async function sendEmail(to: string, subject: string, htmlContent: string) {
       'Content-Type: text/html; charset=utf-8',
       'MIME-Version: 1.0',
       `To: ${to}`,
-      'From: "TradersTap" <' + process.env.EMAIL_USER + '>',
+      'From: "TradesTap" <' + process.env.EMAIL_USER + '>',
       `Subject: ${subject}`,
       '',
       htmlContent
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
             </ul>
             <p style="color: #333;">Please contact the customer directly if you need any clarification or have questions about this booking.</p>
             <p style="color: #333;">You can view all your bookings in your <a href="${process.env.NEXTAUTH_URL}/provider-dashboard" style="color: #0066cc;">Provider Dashboard</a>.</p>
-            <p style="color: #333;">Thank you for using TradersTap!</p>
+            <p style="color: #333;">Thank you for using TradesTap!</p>
           </div>
         `;
         
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
       const customerEmailContent = `
         <div style="font-family: Arial, sans-serif; color: #333;">
           <h1 style="color: #333;">Booking Confirmation</h1>
-          <p style="color: #333;">Thank you for booking ${serviceName} through TradersTap!</p>
+          <p style="color: #333;">Thank you for booking ${serviceName} through TradesTap!</p>
           <h2 style="color: #333;">Your Booking Details:</h2>
           <ul style="color: #333;">
             <li><strong>Service:</strong> ${serviceName}</li>
