@@ -10,7 +10,7 @@ declare global {
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, SessionProvider } from "next-auth/react";
+import { useSession, SessionProvider, signIn } from "next-auth/react";
 import Link from "next/link";
 import NewBookingModal from "@/components/NewBookingModal";
 import Image from 'next/image';
@@ -902,8 +902,8 @@ animate={{ opacity: 1, y: 0 }}
                             selectedServiceType: serviceToBook
                           }));
                           sessionStorage.setItem('selectedServiceForBooking', serviceToBook);
-                          // Trigger Google OAuth directly - redirect to home page after login
-                          window.location.href = '/api/auth/signin/google?callbackUrl=' + encodeURIComponent(window.location.origin);
+                          // Use NextAuth's signIn function for proper redirect handling
+                          signIn('google', { callbackUrl: window.location.origin });
                         }}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm"
                         type="button"

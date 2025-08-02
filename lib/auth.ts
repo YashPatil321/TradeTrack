@@ -12,20 +12,16 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  pages: {
+    signIn: '/api/auth/signin',
+    error: '/api/auth/error',
+  },
   callbacks: {
     async signIn({ account, profile }) {
       return true;
     },
     async redirect({ url, baseUrl }) {
-      // Handle post-login redirects properly
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      }
-      // If it's the same origin, allow it
-      if (url.startsWith(baseUrl)) {
-        return url;
-      }
-      // Default to home page after login
+      // Always redirect to home page after successful login
       return baseUrl;
     },
     async session({ session, token }) {
