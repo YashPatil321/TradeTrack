@@ -242,15 +242,17 @@ function ProfileContent() {
             <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradesTap</a>
           </Link>
           <div className="flex items-center space-x-4">
-            <Link href="/" legacyBehavior>
-              <a className="text-white hover:text-gray-300">Locator</a>
+            <Link href="/about" legacyBehavior>
+              <a className="text-white hover:text-gray-300">About</a>
             </Link>
             {session ? (
-              <Link href="/profile" legacyBehavior>
-                <a className="text-white hover:text-gray-300 text-sm">
-                  Welcome, <span className="text-blue-400">{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
-                </a>
-              </Link>
+              <div className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 hover:bg-gray-700 transition-colors">
+                <Link href="/profile" legacyBehavior>
+                  <a className="text-white hover:text-gray-300 text-base">
+                    Welcome, <span className="text-blue-400" style={{ textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
+                  </a>
+                </Link>
+              </div>
             ) : (
               <Link href="/profile" legacyBehavior>
                 <a className="text-white hover:text-gray-300">Login</a>

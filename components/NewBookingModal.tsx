@@ -253,10 +253,10 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
   useEffect(() => {
     if (!isOpen) return;
     
-    // Generate next 2 weeks (14 days)
+    // Generate next 2 weeks (14 days) starting from tomorrow
     const dates = [];
     const today = new Date();
-    for (let i = 0; i < 14; i++) {
+    for (let i = 1; i <= 14; i++) { // Start from i=1 (tomorrow) instead of i=0 (today)
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       dates.push(date.toISOString().split('T')[0]);
@@ -617,7 +617,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                       <select
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         required
                       >
                         <option value="">Choose a date...</option>
@@ -641,7 +641,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                       <select
                         value={selectedTime}
                         onChange={(e) => setSelectedTime(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         required
                         disabled={!selectedDate}
                       >
@@ -683,7 +683,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                         type="email"
                         value={clientInfo.email}
                         onChange={(e) => handleClientInfoChange('email', e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         required
                       />
                     </div>
@@ -694,7 +694,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                         type="tel"
                         value={clientInfo.phone}
                         onChange={(e) => handleClientInfoChange('phone', e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         required
                       />
                     </div>
@@ -705,7 +705,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                         type="text"
                         value={clientInfo.city}
                         onChange={(e) => handleClientInfoChange('city', e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         required
                       />
                     </div>
@@ -716,7 +716,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                         type="text"
                         value={clientInfo.address}
                         onChange={(e) => handleClientInfoChange('address', e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         placeholder="Street address where service will be performed"
                         required
                       />
@@ -728,7 +728,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                         type="text"
                         value={clientInfo.zipCode}
                         onChange={(e) => handleClientInfoChange('zipCode', e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         required
                       />
                     </div>

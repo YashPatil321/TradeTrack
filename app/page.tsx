@@ -279,10 +279,10 @@ function Locator() {
   const mapRef = useRef<HTMLDivElement>(null);
   
   // Selection state for the two-step process
-  const [selectionStep, setSelectionStep] = useState<"category" | "service" | "map">("category");
+  const [selectionStep, setSelectionStep] = useState<"category" | "service" | "map">("map");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSpecificService, setSelectedSpecificService] = useState<string | null>(null);
-  const [mapDimmed, setMapDimmed] = useState(true);
+  const [mapDimmed, setMapDimmed] = useState(false);
 
   // Clean up any stored booking selections after login (but don't auto-open modal)
   useEffect(() => {
@@ -334,23 +334,35 @@ function Locator() {
           (position) => {
             const { latitude, longitude } = position.coords;
             const userLocation = { lat: latitude, lng: longitude };
-            
-            // Set map center to user's location and zoom to show 25-mile radius
+
+            // Set map center to user's location and zoom to show 10-mile radius
             newMap.setCenter(userLocation);
-            // Zoom level 10 shows approximately 25-mile radius more accurately
-            newMap.setZoom(10);
-            
-            // Add a 20-mile radius circle around the client's location
+            // Zoom level 12 shows approximately 10-mile radius more accurately
+            newMap.setZoom(12);
+
+            // Add a 10-mile radius circle around the client's location
             const clientServiceArea = new window.google.maps.Circle({
-              strokeColor: '#4F46E5',
+              strokeColor: '#1D4ED8',
               strokeOpacity: 0.8,
               strokeWeight: 2,
-              fillColor: '#4F46E5',
-              fillOpacity: 0.15,
+              fillColor: '#3B82F6',
+              fillOpacity: 0.1,
               map: newMap,
               center: userLocation,
-              radius: 32186.88 // 20 miles in meters
+              radius: 16093.4 // 10 miles in meters
             });
+
+            // Add message about 10-mile radius
+            const infoWindow = new window.google.maps.InfoWindow({
+              content: '<div style="padding: 10px; text-align: center;"><strong>Your Service Area</strong><br>You must book a service provider within this 10-mile radius</div>',
+              position: userLocation
+            });
+            
+            // Show the info window initially, then close after 5 seconds
+            infoWindow.open(newMap);
+            setTimeout(() => {
+              infoWindow.close();
+            }, 5000);
           },
           (error) => {
             console.log('Geolocation error, using default center:', error);
@@ -363,7 +375,7 @@ function Locator() {
           }
         );
       }
-      
+
       // Add zoom control
       newMap.setOptions({
         zoomControl: true,
@@ -371,7 +383,7 @@ function Locator() {
           position: window.google.maps.ControlPosition.RIGHT_CENTER
         }
       });
-      
+
       setMap(newMap);
     };
 
@@ -421,7 +433,7 @@ function Locator() {
         setSelectedService(service);
         setIsModalOpen(true);
       });
-      
+
       newMarkers.push(marker);
     };
 
@@ -429,13 +441,13 @@ function Locator() {
     const batchSize = 50;
     for (let i = 0; i < services.length; i += batchSize) {
       const batch = services.slice(i, i + batchSize);
-      
+
       batch.forEach((service) => {
         if (selectedTrade && service.trade !== selectedTrade) return;
-        
+
         let iconUrl = "";
         let iconSize = new window.google.maps.Size(45, 45); // Larger default size for better visibility
-        
+
         switch (service.trade) {
           case "plumber":
             iconUrl = "/plumber.png";
@@ -456,11 +468,11 @@ function Locator() {
           default:
             iconUrl = "/default.png";
         }
-        
+
         if (service.location && service.location.type === "Point" && Array.isArray(service.location.coordinates)) {
           const lng = service.location.coordinates[0];
           const lat = service.location.coordinates[1];
-          
+
           if (typeof lat === "number" && typeof lng === "number" && lat !== 0 && lng !== 0) {
             const locationObj = {
               lat,
@@ -469,8 +481,7 @@ function Locator() {
             };
             createMarker(service, locationObj, iconUrl, iconSize);
           }
-        }
-        else if (Array.isArray(service.schedule)) {
+        } else if (Array.isArray(service.schedule)) {
           service.schedule.forEach((slot) => {
             if (
               typeof slot.lat === "number" &&
@@ -488,16 +499,16 @@ function Locator() {
           });
         }
       });
-      
+
       // Process the batch
       newMarkers.forEach(marker => marker.setMap(map));
-      
+
       // Wait a bit before processing next batch
       if (i + batchSize < services.length) {
-        setTimeout(() => {}, 100);
+        setTimeout(() => { }, 100);
       }
     }
-    
+
     setMarkers(newMarkers);
   }, [map, services, selectedTrade, selectionStep]);
 
@@ -505,7 +516,7 @@ function Locator() {
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectionStep("service");
-    
+
     // Map trade ID to the corresponding trade value
     const tradeMap: Record<string, string> = {
       "plumbing": "plumber",
@@ -513,7 +524,7 @@ function Locator() {
       "electrician": "electrician",
       "painting": "painter"
     };
-    
+
     setSelectedTrade(tradeMap[categoryId] || "");
   };
 
@@ -549,13 +560,13 @@ function Locator() {
       'Touch-up & Repair Painting': 'touch-up-painting',
       'Wallpaper Removal & Installation': 'wallpaper-service'
     };
-    
-    const serviceId = serviceNameToIdMap[service.name] || 'furniture-assembly';
+
+    const serviceId = serviceNameToIdMap[service.name] || 'furniture-assembly'; // Default to first handyman service
     console.log('Selected service:', service.name, '-> ID:', serviceId); // Debug log
     setSelectedSpecificService(serviceId);
     setSelectionStep("map");
     setMapDimmed(false);
-    
+
     // Search near user's location
     searchNearMe();
   };
@@ -597,42 +608,44 @@ function Locator() {
             <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradesTap</a>
           </Link>
           <div className="flex items-center space-x-4">
-            <Link href="/" legacyBehavior>
-              <a className="text-white hover:text-gray-300">Locator</a>
+            <Link href="/about" legacyBehavior>
+              <a className="text-white hover:text-gray-300 text-base">About</a>
             </Link>
             {session ? (
-              <Link href="/profile" legacyBehavior>
-                <a className="text-white hover:text-gray-300 text-sm">
-                  Welcome, <span className="text-blue-400">{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
-                </a>
-              </Link>
+              <div className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 hover:bg-gray-700 transition-colors">
+                <Link href="/profile" legacyBehavior>
+                  <a className="text-white hover:text-gray-300 text-base">
+                    Welcome, <span className="text-blue-400" style={{ textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
+                  </a>
+                </Link>
+              </div>
             ) : (
               <Link href="/profile" legacyBehavior>
-                <a className="text-white hover:text-gray-300">Login</a>
+                <a className="text-white hover:text-gray-300 text-base">Login</a>
               </Link>
             )}
           </div>
         </div>
       </div>
-      
+
       {/* Map Section with Overlay */}
       <main
         className="flex min-h-screen flex-col items-center justify-between p-0 relative"
         style={{ backgroundColor: "#f5d9bc" }}
       >
         {/* Map Container */}
-        <div 
-          id="map" 
+        <div
+          id="map"
           ref={mapRef}
           className="absolute inset-0 w-full h-full"
           style={{ height: "100vh", width: "100%" }}
         ></div>
-        
+
         {/* Dimming Overlay */}
         {mapDimmed && (
           <div className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-500 z-10"></div>
         )}
-        
+
         {/* Service Selection UI */}
         <div className="relative z-20 w-full h-full flex flex-col items-center justify-center px-4">
           {/* Category Selection Step */}
@@ -640,7 +653,7 @@ function Locator() {
             {selectionStep === "category" && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
-animate={{ opacity: 1, y: 0 }}
+                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20, transition: { duration: 0.3 } }}
                 transition={{ duration: 0.5 }}
                 className="bg-white bg-opacity-90 rounded-lg p-8 max-w-4xl w-full shadow-xl"
@@ -652,7 +665,7 @@ animate={{ opacity: 1, y: 0 }}
                   {serviceCategories.map((category) => {
                     const isHandyman = category.id === "handyman";
                     const isComingSoon = !isHandyman;
-                    
+
                     return (
                       <motion.div
                         key={category.id}
@@ -660,8 +673,8 @@ animate={{ opacity: 1, y: 0 }}
                         whileTap={isHandyman ? { scale: 0.95 } : {}}
                         onClick={isHandyman ? () => handleCategorySelect(category.id) : undefined}
                         className={`relative overflow-hidden rounded-lg shadow-md p-6 transition-all duration-300 text-center ${
-                          isHandyman 
-                            ? 'bg-white cursor-pointer hover:shadow-lg' 
+                          isHandyman
+                            ? 'bg-white cursor-pointer hover:shadow-lg'
                             : 'bg-gradient-to-br from-gray-50 to-gray-100 cursor-not-allowed'
                         }`}
                         style={{ borderTop: `4px solid ${category.color}` }}
@@ -674,12 +687,12 @@ animate={{ opacity: 1, y: 0 }}
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Overlay for disabled categories */}
                         {isComingSoon && (
                           <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] z-5"></div>
                         )}
-                        
+
                         <div className="relative z-10">
                           <div className={`text-4xl mb-4 transition-all duration-300 ${
                             isComingSoon ? 'opacity-60 grayscale' : ''
@@ -691,16 +704,16 @@ animate={{ opacity: 1, y: 0 }}
                           }`}>
                             {category.name}
                           </h3>
-                          
+
                           {/* Coming Soon Animation */}
                           {isComingSoon && (
                             <div className="mt-3">
                               <p className="text-sm text-gray-400 font-medium mb-2">Available Soon</p>
                               <div className="flex justify-center">
                                 <div className="flex space-x-1">
-                                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                                 </div>
                               </div>
                             </div>
@@ -712,7 +725,7 @@ animate={{ opacity: 1, y: 0 }}
                 </div>
               </motion.div>
             )}
-            
+
             {/* Specific Service Selection Step - Updated with detailed service cards */}
             {selectionStep === "service" && selectedCategory && (
               <motion.div
@@ -737,11 +750,14 @@ animate={{ opacity: 1, y: 0 }}
                   </h2>
                   <div className="w-20"></div> {/* Spacer for alignment */}
                 </div>
-                
-                <h3 className="text-xl text-center text-gray-700 mb-6">
+
+                <h3 className="text-xl text-center text-gray-700 mb-2">
                   What specific service do you need?
                 </h3>
-                
+                <p className="text-center text-gray-500 text-sm mb-6">
+                  Blue circle shows your 10-mile service area
+                </p>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-80 overflow-y-auto pr-2">
                   {serviceCategories
                     .find(c => c.id === selectedCategory)
@@ -754,8 +770,17 @@ animate={{ opacity: 1, y: 0 }}
                         className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-all duration-300 border border-gray-200"
                       >
                         <div className="flex justify-between items-start">
-                          <h4 className="text-xl font-semibold text-gray-800">{service.name}</h4>
-                          <span className="text-lg font-bold text-blue-600">{service.price}</span>
+                          <h4 className="text-lg font-semibold text-gray-800">
+                            {service.name}
+                          </h4>
+                          <div className="text-right">
+                            <span className="text-lg font-bold text-blue-600">
+                              {service.price}
+                            </span>
+                            <p className="text-xs text-gray-500">
+                              {service.timeEstimate}
+                            </p>
+                          </div>
                         </div>
                         <p className="text-gray-600 my-3">{service.description}</p>
                         <div className="flex justify-between items-center mt-4 text-sm">
@@ -773,26 +798,7 @@ animate={{ opacity: 1, y: 0 }}
               </motion.div>
             )}
             
-            {/* Map View Controls (when map is active) */}
-            {selectionStep === "map" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="absolute top-20 left-0 right-0 flex justify-center"
-              >
-                <div className="bg-white rounded-lg shadow-lg p-4 flex items-center space-x-4">
-                  <div className="text-gray-800">
-                    <span className="font-medium">Showing:</span> {selectedSpecificService} providers
-                  </div>
-                  <button
-                    onClick={resetSelection}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
-                  >
-                    Change Service
-                  </button>
-                </div>
-              </motion.div>
-            )}
+            {/* Map View Controls (when map is active) - Removed to prevent random popups */}
           </AnimatePresence>
         </div>
 

@@ -71,7 +71,9 @@ async function sendEmail(to: string, subject: string, htmlContent: string) {
   }
 }
 
-// GET /api/bookings - Get bookings for a service and date
+// GET /api/bookings - Get bookings
+// If serviceId and date are provided, returns available times for that service/date
+// If no parameters, returns all bookings (admin only)
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -80,25 +82,49 @@ export async function GET(req: NextRequest) {
     const serviceId = searchParams.get('serviceId');
     const date = searchParams.get('date');
     
-    if (!serviceId || !date) {
+    // If serviceId and date are provided, return available times for that service/date
+    if (serviceId && date) {
+      // Get existing bookings for this service and date
+      const existingBookings = await Booking.find({
+        serviceId,
+        date,
+        status: { $ne: 'cancelled' }
+      }).select('time');
+      
+      const bookedTimes = existingBookings.map(booking => booking.time);
+      
+      return NextResponse.json({
+        success: true,
+        bookedTimes
+      });
+    }
+    
+    // If no parameters, check if user is admin and return all bookings
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: 'Service ID and date are required' },
-        { status: 400 }
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
       );
     }
     
-    // Get existing bookings for this service and date
-    const existingBookings = await Booking.find({
-      serviceId,
-      date,
-      status: { $ne: 'cancelled' }
-    }).select('time');
+    // Check if user is admin
+    const isAdmin = session.user.email === 'yashp.d39@gmail.com';
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
     
-    const bookedTimes = existingBookings.map(booking => booking.time);
+    // Get all bookings, sorted by date (newest first)
+    const allBookings = await Booking.find({})
+      .sort({ date: -1, time: -1 })
+      .lean();
     
     return NextResponse.json({
       success: true,
-      bookedTimes
+      data: allBookings
     });
   } catch (error) {
     console.error('Error fetching bookings:', error);
@@ -198,6 +224,11 @@ export async function POST(req: NextRequest) {
     await booking.save();
     console.log('Booking saved successfully:', booking._id);
     
+    // Validate email format before sending
+    const isValidEmail = (email: string) => {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
     // Send confirmation emails
     try {
       // Format date and time for emails
@@ -210,6 +241,12 @@ export async function POST(req: NextRequest) {
       
       // Customer confirmation email
       const customerEmailSubject = `TradesTap Booking Confirmation - ${serviceName}`;
+      
+      // Validate customer email before sending
+      if (!isValidEmail(customerEmail)) {
+        console.error('Invalid customer email format:', customerEmail);
+        throw new Error('Invalid customer email format');
+      }
       const customerEmailContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #000;">
           <h2 style="color: #000; border-bottom: 2px solid #007bff; padding-bottom: 10px;">Booking Confirmed!</h2>
@@ -283,10 +320,14 @@ export async function POST(req: NextRequest) {
           </div>
         `;
         
-        // For now, send provider notification to the same email (admin)
-        // In production, you would get the provider's actual email from the database
-        console.log('Sending provider notification email');
-        await sendEmail(process.env.EMAIL_USER || customerEmail, providerEmailSubject, providerEmailContent);
+        // Send provider notification
+        const providerEmail = process.env.EMAIL_USER;
+        if (providerEmail && isValidEmail(providerEmail)) {
+          console.log('Sending provider notification email to:', providerEmail);
+          await sendEmail(providerEmail, providerEmailSubject, providerEmailContent);
+        } else {
+          console.warn('No valid provider email configured, skipping provider notification');
+        }
       }
       
       console.log('All confirmation emails sent successfully');
