@@ -279,10 +279,10 @@ function Locator() {
   const mapRef = useRef<HTMLDivElement>(null);
   
   // Selection state for the two-step process
-  const [selectionStep, setSelectionStep] = useState<"category" | "service" | "map">("map");
+  const [selectionStep, setSelectionStep] = useState<"category" | "service" | "map">("category");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSpecificService, setSelectedSpecificService] = useState<string | null>(null);
-  const [mapDimmed, setMapDimmed] = useState(false);
+  const [mapDimmed, setMapDimmed] = useState(true);
 
   // Clean up any stored booking selections after login (but don't auto-open modal)
   useEffect(() => {
@@ -337,8 +337,8 @@ function Locator() {
 
             // Set map center to user's location and zoom to show 10-mile radius
             newMap.setCenter(userLocation);
-            // Zoom level 12 shows approximately 10-mile radius more accurately
-            newMap.setZoom(12);
+            // Zoom level 11 shows 10-mile radius more clearly
+            newMap.setZoom(11);
 
             // Add a 10-mile radius circle around the client's location
             const clientServiceArea = new window.google.maps.Circle({
@@ -798,7 +798,26 @@ function Locator() {
               </motion.div>
             )}
             
-            {/* Map View Controls (when map is active) - Removed to prevent random popups */}
+            {/* Map View Controls (when map is active) */}
+            {selectionStep === "map" && selectedSpecificService && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute top-20 left-0 right-0 flex justify-center"
+              >
+                <div className="bg-white rounded-lg shadow-lg p-4 flex items-center space-x-4">
+                  <div className="text-gray-800">
+                    <span className="font-medium">Showing:</span> {selectedSpecificService} providers
+                  </div>
+                  <button
+                    onClick={resetSelection}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+                  >
+                    Change Service
+                  </button>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
 
