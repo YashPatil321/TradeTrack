@@ -13,7 +13,7 @@ export default function AboutPage() {
       <div className="fixed top-0 left-0 right-0 z-10 bg-black text-white shadow-md">
         <div className="container mx-auto flex justify-between items-center p-2">
           <Link href="/" className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">
-            TradesTap
+            TradesMonk
           </Link>
           <div className="flex items-center space-x-4">
             <Link href="/about" className="text-white hover:text-gray-300 text-base">
@@ -47,7 +47,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4 py-24">
           <div className="text-center max-w-5xl mx-auto">
             <h1 className="text-6xl font-bold mb-8 leading-tight">
-              About TradesTap
+              About TradesMonk
             </h1>
             <p className="text-2xl text-gray-300 leading-relaxed">
               Empowering local service professionals and connecting communities with trusted, independent contractors.
@@ -65,7 +65,7 @@ export default function AboutPage() {
             </h2>
             <div className="prose prose-lg max-w-none">
               <p className="text-gray-600 mb-6 text-lg leading-relaxed">
-                TradesTap was born from a simple truth: <strong>local service professionals are the backbone of our communities</strong>, 
+                TradesMonk was born from a simple truth: <strong>local service professionals are the backbone of our communities</strong>, 
                 yet they're constantly being pushed out by massive corporations that prioritize profit over personal service. 
                 We're here to level the playing field.
               </p>
@@ -76,7 +76,7 @@ export default function AboutPage() {
               </p>
               <p className="text-gray-600 mb-6 text-lg leading-relaxed">
                 Our mission is simple: connect homeowners directly with skilled, independent professionals in their community. 
-                When you choose TradesTap, you're not just getting quality service – you're supporting local families, 
+                When you choose TradesMonk, you're not just getting quality service – you're supporting local families, 
                 keeping money in your community, and helping small businesses thrive.
               </p>
             </div>
@@ -121,7 +121,7 @@ export default function AboutPage() {
           {/* Why Choose Us Section */}
           <div className="bg-white rounded-2xl shadow-xl p-12 mb-16">
             <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-              Why Local Matters
+              Why Choose TradesMonk?
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               <div className="flex items-start space-x-6">

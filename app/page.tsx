@@ -314,7 +314,7 @@ function Locator() {
       const mapElement = document.getElementById("map") as HTMLElement;
       if (!mapElement) return;
       
-      // Create map with initial options
+      // Create map with initial options - start zoomed out
       const newMap = new window.google.maps.Map(mapElement, {
         zoom: 4,
         center: { lat: 39.8283, lng: -98.5795 },
@@ -335,10 +335,10 @@ function Locator() {
             const { latitude, longitude } = position.coords;
             const userLocation = { lat: latitude, lng: longitude };
 
-            // Set map center to user's location and zoom to show 10-mile radius
+            // Set map center to user's location but keep zoomed out initially
             newMap.setCenter(userLocation);
-            // Zoom level 11 shows 10-mile radius more clearly
-            newMap.setZoom(11);
+            // Start zoomed out - will zoom in when service is selected
+            newMap.setZoom(6);
 
             // Add a 10-mile radius circle around the client's location
             const clientServiceArea = new window.google.maps.Circle({
@@ -352,17 +352,7 @@ function Locator() {
               radius: 16093.4 // 10 miles in meters
             });
 
-            // Add message about 10-mile radius
-            const infoWindow = new window.google.maps.InfoWindow({
-              content: '<div style="padding: 10px; text-align: center;"><strong>Your Service Area</strong><br>You must book a service provider within this 10-mile radius</div>',
-              position: userLocation
-            });
-            
-            // Show the info window initially, then close after 5 seconds
-            infoWindow.open(newMap);
-            setTimeout(() => {
-              infoWindow.close();
-            }, 5000);
+            // Info window removed to keep map clean
           },
           (error) => {
             console.log('Geolocation error, using default center:', error);
@@ -579,7 +569,7 @@ function Locator() {
     setMapDimmed(true);
   };
 
-  // "Search Near Me" functionality: recenter map on user's location
+  // "Search Near Me" functionality: recenter map on user's location and zoom in
   const searchNearMe = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -587,7 +577,8 @@ function Locator() {
           const { latitude, longitude } = position.coords;
           if (!map) return;
           map.setCenter({ lat: latitude, lng: longitude });
-          map.setZoom(11);
+          // Zoom in to show 10-mile radius clearly after service selection
+          map.setZoom(12);
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -605,7 +596,7 @@ function Locator() {
       <div className="fixed top-0 left-0 right-0 z-10 bg-black text-white shadow-md">
         <div className="container mx-auto flex justify-between items-center p-2">
           <Link href="/" legacyBehavior>
-            <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradesTap</a>
+            <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradesMonk</a>
           </Link>
           <div className="flex items-center space-x-4">
             <Link href="/about" legacyBehavior>
@@ -615,7 +606,7 @@ function Locator() {
               <div className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 hover:bg-gray-700 transition-colors">
                 <Link href="/profile" legacyBehavior>
                   <a className="text-white hover:text-gray-300 text-base">
-                    Welcome, <span className="text-blue-400" style={{ textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>{session.user?.name || session.user?.email?.split('@')[0] || 'tradetrack'}</span>!
+                    Welcome, <span className="text-blue-400" style={{ textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>{session.user?.name || session.user?.email?.split('@')[0] || 'User'}</span>!
                   </a>
                 </Link>
               </div>

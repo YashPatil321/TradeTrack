@@ -166,9 +166,9 @@ function ProfileContent() {
 
         <div className="container mx-auto p-8 pt-24">
           <div className="bg-white p-8 rounded-lg shadow-lg max-w-xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-6">Welcome to TradeTrack!</h2>
+            <h2 className="text-2xl font-bold text-center mb-6">Welcome to TradesMonk!</h2>
             <p className="text-center text-gray-600 mb-6">
-              Please select how you want to use TradeTrack. You can always change this later.
+              Please select how you want to use TradesMonk. You can always change this later.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -239,7 +239,7 @@ function ProfileContent() {
       <div className="fixed top-0 left-0 right-0 z-10 bg-black text-white shadow-md">
         <div className="container mx-auto flex justify-between items-center p-2">
           <Link href="/" legacyBehavior>
-            <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradesTap</a>
+            <a className="text-xl font-bold text-white hover:text-gray-300 cursor-pointer">TradesMonk</a>
           </Link>
           <div className="flex items-center space-x-4">
             <Link href="/about" legacyBehavior>
