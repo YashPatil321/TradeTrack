@@ -32,7 +32,7 @@ async function sendEmail(to: string, subject: string, htmlContent: string) {
       'Content-Type: text/html; charset=utf-8',
       'MIME-Version: 1.0',
       `To: ${to}`,
-      'From: "TradesTap" <' + process.env.EMAIL_USER + '>',
+      'From: "TradesMonk" <' + process.env.EMAIL_USER + '>',
       `Subject: ${subject}`,
       '',
       htmlContent
@@ -240,7 +240,7 @@ export async function POST(req: NextRequest) {
       });
       
       // Customer confirmation email
-      const customerEmailSubject = `TradesTap Booking Confirmation - ${serviceName}`;
+      const customerEmailSubject = `TradesMonk Booking Confirmation - ${serviceName}`;
       
       // Validate customer email before sending
       if (!isValidEmail(customerEmail)) {
@@ -270,10 +270,10 @@ export async function POST(req: NextRequest) {
           
           <p style="color: #000;">The service provider will contact you before the appointment to confirm details.</p>
           
-          <p style="color: #000;">Thank you for choosing TradesTap!</p>
+          <p style="color: #000;">Thank you for choosing TradesMonk!</p>
           
           <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-          <p style="color: #666; font-size: 12px;">This is an automated message from TradesTap. Please do not reply to this email.</p>
+          <p style="color: #666; font-size: 12px;">This is an automated message from TradesMonk. Please do not reply to this email.</p>
         </div>
       `;
       
@@ -283,14 +283,14 @@ export async function POST(req: NextRequest) {
       
       // Provider notification email (if provider has email)
       if (providerName && providerName !== 'Unknown Provider') {
-        const providerEmailSubject = `New TradesTap Booking - ${serviceName}`;
+        const providerEmailSubject = `New TradesMonk Booking - ${serviceName}`;
         const providerEmailContent = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #000;">
             <h2 style="color: #000; border-bottom: 2px solid #007bff; padding-bottom: 10px;">New Booking Received!</h2>
             
             <p style="color: #000;">Hello ${providerName},</p>
             
-            <p style="color: #000;">You have received a new service booking through TradesTap:</p>
+            <p style="color: #000;">You have received a new service booking through TradesMonk:</p>
             
             <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="color: #000; margin-top: 0;">Booking Details</h3>
@@ -313,10 +313,10 @@ export async function POST(req: NextRequest) {
               <li>Collect payment in person after completion</li>
             </ul>
             
-            <p style="color: #000;">Thank you for being part of the TradesTap network!</p>
+            <p style="color: #000;">Thank you for being part of the TradesMonk network!</p>
             
             <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-            <p style="color: #666; font-size: 12px;">This is an automated message from TradesTap. Please do not reply to this email.</p>
+            <p style="color: #666; font-size: 12px;">This is an automated message from TradesMonk. Please do not reply to this email.</p>
           </div>
         `;
         

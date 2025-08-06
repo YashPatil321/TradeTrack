@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/auth";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TradesTap - Professional Service Providers",
+  title: "TradesMonk - Professional Service Providers",
   description: "Connect with trusted handymen, plumbers, electricians, and painters in your area",
 };
 

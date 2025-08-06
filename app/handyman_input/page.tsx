@@ -72,10 +72,11 @@ function HandymanInputContent() {
   // Provider information
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState("");
-  const [availableHours, setAvailableHours] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [location, setLocation] = useState("");
+  const [address, setAddress] = useState("");
+  const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null);
   
   // Service selection
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -124,6 +125,63 @@ function HandymanInputContent() {
     );
   };
   
+  // Geocode address to get coordinates
+  const geocodeAddress = async (address: string) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+      );
+      const data = await response.json();
+      
+      if (data.results && data.results.length > 0) {
+        const location = data.results[0].geometry.location;
+        setCoordinates({ lat: location.lat, lng: location.lng });
+        return true;
+      } else {
+        setError("Could not find the address. Please check and try again.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      setError("Error finding address. Please try again.");
+      return false;
+    }
+  };
+  
+  // Handle address input with geocoding
+  const handleAddressChange = async (value: string) => {
+    setAddress(value);
+    if (value.length > 10) { // Only geocode if address is reasonably long
+      await geocodeAddress(value);
+    }
+  };
+  
+  // Handle image file selection
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setImageUrl(previewUrl);
+    }
+  };
+  
+  // Handle drag and drop for images
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setImageUrl(previewUrl);
+    }
+  };
+  
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,8 +191,13 @@ function HandymanInputContent() {
       return;
     }
     
-    if (!name || !description || !availableHours || !phoneNumber || !location) {
+    if (!name || !description || !phoneNumber || !address) {
       setError("Please fill in all required fields");
+      return;
+    }
+    
+    if (!coordinates) {
+      setError("Please enter a valid address so we can locate you on the map");
       return;
     }
     
@@ -159,20 +222,28 @@ function HandymanInputContent() {
         };
       });
       
+      // Upload image if provided
+      let finalImageUrl = imageUrl;
+      if (imageFile) {
+        // For now, use the preview URL. In production, you'd upload to a cloud service
+        // TODO: Implement actual image upload to cloud storage
+        finalImageUrl = imageUrl; // Using preview URL for now
+      }
+      
       // Create the service data matching the Service model
       const serviceData = {
         name,
         description,
-        image: imageUrl,
-        hours: availableHours,
+        image: finalImageUrl || "https://via.placeholder.com/300x200?text=Handyman+Service",
+        hours: "Monday-Friday 9AM-5PM", // Consistent hours as requested
         phoneNumber,
-        mainLocation: location,
+        mainLocation: address,
         trade: "handyman", // Specific trade type
         userEmail: session.user.email,
-        // GeoJSON location structure expected by the Service model
+        // GeoJSON location structure with actual coordinates
         location: {
           type: "Point",
-          coordinates: [0, 0] // Will be updated when geocoding is added
+          coordinates: [coordinates.lng, coordinates.lat] // [longitude, latitude]
         },
         // Include the specific services offered
         services: formattedServices
@@ -200,9 +271,10 @@ function HandymanInputContent() {
       setName("");
       setDescription("");
       setImageUrl("");
-      setAvailableHours("");
+      setImageFile(null);
       setPhoneNumber("");
-      setLocation("");
+      setAddress("");
+      setCoordinates(null);
       
       // Redirect to profile after 2 seconds
       setTimeout(() => {
@@ -221,7 +293,7 @@ function HandymanInputContent() {
       {/* Fixed Nav Bar */}
       <nav className="fixed top-0 left-0 w-full bg-blue-600 text-white p-4 z-50 shadow-lg">
         <div className="container mx-auto flex items-center justify-between">
-          <div className="text-xl font-bold">TradesTap</div>
+          <div className="text-xl font-bold">TradesMonk</div>
           <ul className="flex space-x-4">
             <li>
               <Link href="/" className="hover:text-gray-200">
@@ -288,47 +360,89 @@ function HandymanInputContent() {
                 </div>
                 
                 <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="location">
-                    Service Area/Location *
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="address">
+                    Service Address *
                   </label>
                   <input
-                    id="location"
+                    id="address"
                     type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    placeholder="e.g., Downtown, North Side, etc."
+                    value={address}
+                    onChange={(e) => handleAddressChange(e.target.value)}
+                    className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
+                      coordinates ? 'border-green-500' : address.length > 10 ? 'border-red-500' : ''
+                    }`}
+                    placeholder="Enter your full service address (e.g., 123 Main St, San Diego, CA 92101)"
                     required
                   />
+                  {coordinates && (
+                    <p className="text-green-600 text-sm mt-1">✓ Address verified and located on map</p>
+                  )}
+                  {address.length > 10 && !coordinates && (
+                    <p className="text-red-600 text-sm mt-1">Please enter a valid address</p>
+                  )}
                 </div>
                 
+                {/* Hours are now fixed to 9-5 as requested */}
                 <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="hours">
-                    Available Hours *
-                  </label>
-                  <input
-                    id="hours"
-                    type="text"
-                    value={availableHours}
-                    onChange={(e) => setAvailableHours(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    placeholder="e.g., Mon-Fri: 9AM-5PM, Weekends: 10AM-2PM"
-                    required
-                  />
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                    <p className="text-blue-800 text-sm">
+                      <strong>Service Hours:</strong> Monday-Friday 9AM-5PM (Standard for all TradesMonk providers)
+                    </p>
+                  </div>
                 </div>
                 
+                {/* Image Upload with Drag and Drop */}
                 <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="image">
-                    Profile Image URL
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Profile Image
                   </label>
-                  <input
-                    id="image"
-                    type="text"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    placeholder="https://example.com/your-image.jpg"
-                  />
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  >
+                    {imageUrl ? (
+                      <div className="space-y-4">
+                        <img
+                          src={imageUrl}
+                          alt="Preview"
+                          className="mx-auto h-32 w-32 object-cover rounded-lg"
+                        />
+                        <p className="text-green-600 text-sm">Image selected successfully!</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageFile(null);
+                            setImageUrl("");
+                          }}
+                          className="text-red-600 text-sm hover:underline"
+                        >
+                          Remove Image
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="text-gray-400">
+                          <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Drag and drop your image here, or</p>
+                          <label className="cursor-pointer">
+                            <span className="text-blue-600 hover:text-blue-500 font-medium">browse to upload</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="mb-4">

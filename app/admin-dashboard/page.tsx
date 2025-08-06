@@ -143,7 +143,7 @@ export default function AdminDashboard() {
       <div className="bg-black text-white shadow-md">
         <div className="container mx-auto flex justify-between items-center p-4">
           <Link href="/" className="text-xl font-bold hover:text-gray-300">
-            TradesTap Admin Dashboard
+            TradesMonk Admin Dashboard
           </Link>
           <div className="flex items-center space-x-4">
             <span className="text-sm">Welcome, Admin</span>

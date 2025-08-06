@@ -33,14 +33,14 @@ export async function POST(request: Request) {
       'Content-Type: text/html; charset=utf-8',
       'MIME-Version: 1.0',
       `To: ${to}`,
-      'From: "TradesTap" <' + process.env.EMAIL_USER + '>',
+      'From: "TradesMonk" <' + process.env.EMAIL_USER + '>',
       `Subject: ${subject}`,
       '',
       `<div style="font-family: Arial, sans-serif; color: #333;">
-        <h1 style="color: #333;">TradesTap</h1>
+        <h1 style="color: #333;">TradesMonk</h1>
         <div>${message}</div>
         <hr>
-        <p style="color: #666; font-size: 12px;">This email was sent from the TradesTap application.</p>
+        <p style="color: #666; font-size: 12px;">This email was sent from the TradesMonk application.</p>
       </div>`
     ].join('\n');
 
