@@ -93,9 +93,12 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
   const router = useRouter();
   const { data: session, status } = useSession();
   
-  // Check authentication when modal opens
+  // Check authentication when modal opens - improved logic to prevent infinite loops
   useEffect(() => {
+    // Only redirect if we're definitely unauthenticated (not loading)
     if (isOpen && status === 'unauthenticated') {
+      console.log('User not authenticated, redirecting to login...');
+      
       // Store the current booking intent in sessionStorage for redirect back
       sessionStorage.setItem('pendingBooking', JSON.stringify({
         serviceId: service?._id,
@@ -108,7 +111,18 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
       window.location.href = '/api/auth/signin/google?callbackUrl=' + encodeURIComponent(window.location.origin);
       return;
     }
+    
+    // Debug logging to help identify session issues
+    if (isOpen) {
+      console.log('Booking modal opened - Session status:', status);
+      console.log('Session data:', session);
+    }
   }, [isOpen, status, service, selectedServiceType, onCloseAction, router]);
+  
+  // Don't render modal if session is still loading to prevent authentication issues
+  if (status === 'loading') {
+    return null;
+  }
   
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
