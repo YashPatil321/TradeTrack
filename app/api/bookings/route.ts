@@ -178,6 +178,34 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Enforce: clients can only book jobs at least one day in advance (no same-day bookings)
+    try {
+      const today = new Date();
+      // Normalize to local date (no time) for comparison
+      const localToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const bookingDate = new Date(date + 'T00:00:00');
+      const diffMs = bookingDate.getTime() - localToday.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (isNaN(bookingDate.getTime())) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid booking date format. Use YYYY-MM-DD.' },
+          { status: 400 }
+        );
+      }
+      if (diffDays < 1) {
+        return NextResponse.json(
+          { success: false, error: 'Bookings must be scheduled at least one day in advance.' },
+          { status: 400 }
+        );
+      }
+    } catch (dateErr) {
+      console.error('Date validation error:', dateErr);
+      return NextResponse.json(
+        { success: false, error: 'Failed to validate booking date' },
+        { status: 400 }
+      );
+    }
     
     // Check if time slot is already booked
     const existingBooking = await Booking.findOne({
@@ -320,14 +348,48 @@ export async function POST(req: NextRequest) {
           </div>
         `;
         
-        // Send provider notification
-        const providerEmail = process.env.EMAIL_USER;
+        // Send provider notification to provider's email if provided, otherwise fallback to configured EMAIL_USER
+        const providerEmail = (body && body.providerEmail) ? body.providerEmail : process.env.EMAIL_USER;
         if (providerEmail && isValidEmail(providerEmail)) {
           console.log('Sending provider notification email to:', providerEmail);
           await sendEmail(providerEmail, providerEmailSubject, providerEmailContent);
         } else {
           console.warn('No valid provider email configured, skipping provider notification');
         }
+      }
+      
+      // Send review request email immediately after booking creation (includes direct review link)
+      try {
+        const origin = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const reviewParams = new URLSearchParams({
+          bookingId: String(booking._id),
+          customerName: clientName || 'Customer',
+          serviceName,
+          providerName: providerName || 'Service Provider',
+        });
+        const reviewUrl = `${origin}/reviews/submit?${reviewParams.toString()}`;
+
+        const reviewEmailSubject = `How was your ${serviceName}? Please leave a quick review`;
+        const reviewEmailContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #000;">
+            <h2 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 10px;">We'd love your feedback</h2>
+            <p style="color: #000;">Hi ${clientName || 'there'},</p>
+            <p style="color: #000;">Thanks for booking <strong>${serviceName}</strong> with <strong>${providerName || 'our provider'}</strong>. It would mean a lot if you could leave a quick review.</p>
+            <p style="margin: 20px 0;">
+              <a href="${reviewUrl}" style="background:#000; color:#fff; padding:12px 18px; text-decoration:none; border-radius:6px; display:inline-block">Leave a Review</a>
+            </p>
+            <p style="color: #000;">Or copy this link:<br/>
+              <a href="${reviewUrl}">${reviewUrl}</a>
+            </p>
+            <hr style="border:none; border-top:1px solid #ddd; margin:30px 0;"/>
+            <p style="color:#666; font-size:12px;">This is an automated email from TradesMonk.</p>
+          </div>
+        `;
+
+        console.log('Sending review request email to:', customerEmail);
+        await sendEmail(customerEmail, reviewEmailSubject, reviewEmailContent);
+      } catch (reviewErr) {
+        console.error('Error sending review request email:', reviewErr);
       }
       
       console.log('All confirmation emails sent successfully');

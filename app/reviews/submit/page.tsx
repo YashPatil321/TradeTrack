@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import MainNav from '@/components/MainNav';
 
 interface ReviewFormData {
   customerEmail: string;
@@ -68,10 +69,11 @@ function ReviewSubmissionForm() {
             type="button"
             onClick={() => handleStarClick(field, star)}
             className={`text-2xl transition-colors duration-200 ${
-              star <= currentValue ? 'text-yellow-400' : 'text-gray-300'
-            } hover:text-yellow-400`}
+              star <= currentValue ? 'text-amber-500' : 'text-gray-300'
+            } hover:text-amber-600`}
+            aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
           >
-            ⭐
+            ★
           </button>
         ))}
       </div>
@@ -118,16 +120,16 @@ function ReviewSubmissionForm() {
 
   if (submitSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-tan-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">🎉</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Thank You!</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Thank You!</h1>
           <p className="text-gray-600 mb-6">
             Your review has been submitted successfully. Thank you for helping other customers make informed decisions!
           </p>
           <Link 
             href="/"
-            className="inline-block bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+            className="inline-block bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200"
           >
             Return to TradesMonk
           </Link>
@@ -137,23 +139,12 @@ function ReviewSubmissionForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Navigation */}
-      <nav className="bg-black text-white p-4 shadow-lg">
-        <div className="container mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold">
-            TradesMonk
-          </Link>
-          <div className="text-sm">
-            Leave a Review
-          </div>
-        </div>
-      </nav>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen" style={{ backgroundColor: '#f5e6d3' }}>
+      <MainNav />
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6 md:p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            <h1 className="text-3xl font-bold text-black mb-2">
               How was your service?
             </h1>
             <p className="text-gray-600">
@@ -162,38 +153,38 @@ function ReviewSubmissionForm() {
           </div>
 
           {/* Service Details */}
-          <div className="bg-gray-50 rounded-lg p-6 mb-8">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Service Details</h2>
+          <div className="bg-gray-50 rounded-lg p-6 mb-8 border border-gray-200">
+            <h2 className="text-lg font-semibold text-black mb-4">Service Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium text-gray-600">Service:</span>
-                <p className="text-gray-800">{formData.serviceName}</p>
+                <span className="font-medium text-gray-700 block mb-1">Service:</span>
+                <p className="text-gray-900 font-medium">{formData.serviceName || 'N/A'}</p>
               </div>
               <div>
-                <span className="font-medium text-gray-600">Provider:</span>
-                <p className="text-gray-800">{formData.providerName}</p>
+                <span className="font-medium text-black block mb-1">Provider:</span>
+                <p className="text-black font-medium">{formData.providerName || 'N/A'}</p>
               </div>
               <div>
-                <span className="font-medium text-gray-600">Customer:</span>
-                <p className="text-gray-800">{formData.customerName}</p>
+                <span className="font-medium text-black block mb-1">Customer:</span>
+                <p className="text-black">{formData.customerName || 'N/A'}</p>
               </div>
               <div>
-                <span className="font-medium text-gray-600">Booking ID:</span>
-                <p className="text-gray-800">{formData.bookingId}</p>
+                <span className="font-medium text-black block mb-1">Booking ID:</span>
+                <p className="font-mono text-black">{formData.bookingId || 'N/A'}</p>
               </div>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Overall Rating */}
-            <div>
-              <label className="block text-lg font-semibold text-gray-800 mb-3">
-                Overall Rating *
+            <div className="space-y-2">
+              <label className="block text-lg font-semibold text-black mb-2">
+                Overall Rating <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center space-x-4">
                 {renderStars('rating', formData.rating)}
-                <span className="text-gray-600">
-                  {formData.rating > 0 && `${formData.rating} star${formData.rating !== 1 ? 's' : ''}`}
+                <span className="text-black font-medium">
+                  {formData.rating > 0 ? `${formData.rating} star${formData.rating !== 1 ? 's' : ''}` : 'Select rating'}
                 </span>
               </div>
             </div>
@@ -201,19 +192,19 @@ function ReviewSubmissionForm() {
             {/* Detailed Ratings */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   Service Quality
                 </label>
                 {renderStars('serviceQuality', formData.serviceQuality)}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   Timeliness
                 </label>
                 {renderStars('timeliness', formData.timeliness)}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   Communication
                 </label>
                 {renderStars('communication', formData.communication)}
@@ -250,7 +241,7 @@ function ReviewSubmissionForm() {
                   className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                     formData.wouldRecommend === true
                       ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      : 'bg-gray-200 text-black hover:bg-gray-300'
                   }`}
                 >
                   👍 Yes
@@ -261,7 +252,7 @@ function ReviewSubmissionForm() {
                   className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                     formData.wouldRecommend === false
                       ? 'bg-red-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      : 'bg-gray-200 text-black hover:bg-gray-300'
                   }`}
                 >
                   👎 No
@@ -281,7 +272,7 @@ function ReviewSubmissionForm() {
               <button
                 type="submit"
                 disabled={isSubmitting || formData.rating === 0}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
+                className="bg-black text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Review'}
               </button>
