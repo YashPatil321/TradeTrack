@@ -119,11 +119,6 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
     }
   }, [isOpen, status, service, selectedServiceType, onCloseAction, router]);
   
-  // Don't render modal if session is still loading to prevent authentication issues
-  if (status === 'loading') {
-    return null;
-  }
-  
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
@@ -518,6 +513,11 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
   };
 
   if (!isOpen) return null;
+
+  // Don't render modal if session is still loading to prevent authentication issues
+  if (status === 'loading') {
+    return null;
+  }
 
   const serviceDetails = getSelectedServiceDetails();
   const availableSlots = availableTimes.filter(time => !bookedSlots.includes(time));
