@@ -42,6 +42,9 @@ const ServiceSchema = new Schema({
     enum: ["food_truck", "plumber", "electrician", "handyman", "painter"],
     required: true,
   },
+  // Contact
+  phoneNumber: { type: String },
+  contactEmail: { type: String },
   // CRITICAL: Add services array for handyman specific services
   services: [
     {
@@ -60,6 +63,6 @@ const ServiceSchema = new Schema({
   ],
   // Associate the service with the user (e.g., by storing their email)
   userEmail: { type: String, required: true },
-});
+}, { timestamps: true });
 
 export default models.Service || model("Service", ServiceSchema);

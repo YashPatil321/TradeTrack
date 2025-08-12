@@ -72,7 +72,13 @@ const serviceCategories = [
     services: [
       {
         name: "15AMP Wall Outlet Upgrade Package",
-        description: "Complete upgrade of 10 wall outlets to modern 15AMP duplex with USB-A and USB-C ports. White outlets provided and installed professionally",
+        description: "Complete upgrade of 20 wall outlets to modern 15AMP duplex with USB-A and USB-C ports. White outlets provided and installed professionally",
+        price: "$500",
+        timeEstimate: "4 hours"
+      },
+      {
+        name: "20AMP Wall Outlet Upgrade Package",
+        description: "Complete upgrade of 20 wall outlets to modern 20AMP duplex with USB-A and USB-C ports. White outlets provided and installed professionally",
         price: "$500",
         timeEstimate: "4 hours"
       },
@@ -277,11 +283,17 @@ function Locator() {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
+  // Cache for address -> coords to reduce repeated geocoding
+  const geocodeCache = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  // Service templates loaded from Mongo so new services show up automatically
+  type ServiceTemplateItem = { trade: string; name: string; description: string; price: string; timeEstimate: string };
+  const [serviceTemplates, setServiceTemplates] = useState<ServiceTemplateItem[]>([]);
   
   // Selection state for the two-step process
   const [selectionStep, setSelectionStep] = useState<"category" | "service" | "map">("category");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSpecificService, setSelectedSpecificService] = useState<string | null>(null);
+  const [selectedServiceName, setSelectedServiceName] = useState<string | null>(null);
   const [mapDimmed, setMapDimmed] = useState(true);
 
   // Clean up any stored booking selections after login (but don't auto-open modal)
@@ -307,6 +319,33 @@ function Locator() {
     }
     fetchServices();
   }, []);
+
+  // Fetch service templates (handyman/electrician/etc.) from DB
+  useEffect(() => {
+    async function fetchTemplates() {
+      try {
+        const res = await fetch('/api/service-templates');
+        const json = await res.json();
+        if (json?.success && Array.isArray(json.data)) {
+          setServiceTemplates(json.data);
+        }
+      } catch (e) {
+        console.error('Failed to load service templates', e);
+      }
+    }
+    fetchTemplates();
+  }, []);
+
+  // Merge DB templates with hardcoded list for a category (DB at bottom)
+  const getMergedServices = (categoryId: string) => {
+    const base = serviceCategories.find(c => c.id === categoryId)?.services || [];
+    const idToTrade: Record<string, string> = { plumbing: 'plumbing', handyman: 'handyman', electrician: 'electrician', painting: 'painting' };
+    const trade = idToTrade[categoryId];
+    const fromDb = serviceTemplates
+      .filter((t) => t.trade === trade)
+      .map((t) => ({ name: t.name, description: t.description, price: t.price, timeEstimate: t.timeEstimate }));
+    return [...base, ...fromDb];
+  };
 
   // Load Google Maps script and initialize the map
   useEffect(() => {
@@ -403,6 +442,8 @@ function Locator() {
     setMarkers([]);
 
     const newMarkers: google.maps.Marker[] = [];
+    const bounds = new window.google.maps.LatLngBounds();
+    const geocoder = new window.google.maps.Geocoder();
 
     const createMarker = (service: Service, location: { lat: number; lng: number; address: string }, iconUrl: string, iconSize: google.maps.Size) => {
       const marker = new window.google.maps.Marker({
@@ -425,6 +466,7 @@ function Locator() {
       });
 
       newMarkers.push(marker);
+      bounds.extend(new window.google.maps.LatLng(location.lat, location.lng));
     };
 
     // Create markers in batches to prevent flickering
@@ -434,6 +476,11 @@ function Locator() {
 
       batch.forEach((service) => {
         if (selectedTrade && service.trade !== selectedTrade) return;
+        // If a specific service has been selected, only show providers that offer it
+        if (selectedServiceName) {
+          const offers = Array.isArray(service.services) && service.services.some(s => s?.service === selectedServiceName);
+          if (!offers) return;
+        }
 
         let iconUrl = "";
         let iconSize = new window.google.maps.Size(45, 45); // Larger default size for better visibility
@@ -487,6 +534,34 @@ function Locator() {
               createMarker(service, locationObj, iconUrl, iconSize);
             }
           });
+        } else if (service.mainLocation) {
+          // Fallback: geocode provider main address
+          const addr = service.mainLocation.trim();
+          const cached = geocodeCache.current.get(addr);
+          const apply = (lat: number, lng: number) => {
+            if (typeof lat === 'number' && typeof lng === 'number' && lat !== 0 && lng !== 0) {
+              createMarker(
+                service,
+                { lat, lng, address: addr },
+                iconUrl,
+                iconSize
+              );
+            }
+          };
+          if (cached) {
+            apply(cached.lat, cached.lng);
+          } else {
+            geocoder.geocode({ address: addr }, (results, status) => {
+              if (status === 'OK' && results && results[0]) {
+                const loc = results[0].geometry.location;
+                const coords = { lat: loc.lat(), lng: loc.lng() };
+                geocodeCache.current.set(addr, coords);
+                apply(coords.lat, coords.lng);
+              } else {
+                console.warn('Geocode failed for', addr, status);
+              }
+            });
+          }
         }
       });
 
@@ -500,6 +575,19 @@ function Locator() {
     }
 
     setMarkers(newMarkers);
+    // Auto-fit to markers to ensure visibility
+    if (newMarkers.length > 0) {
+      try {
+        map.fitBounds(bounds, 60);
+        // If only one marker, set a reasonable zoom
+        if (newMarkers.length === 1) {
+          map.setZoom(12);
+          map.panTo(bounds.getCenter());
+        }
+      } catch (e) {
+        console.warn('fitBounds failed', e);
+      }
+    }
   }, [map, services, selectedTrade, selectionStep]);
 
   // Handle category selection
@@ -554,6 +642,7 @@ function Locator() {
     const serviceId = serviceNameToIdMap[service.name] || 'furniture-assembly'; // Default to first handyman service
     console.log('Selected service:', service.name, '-> ID:', serviceId); // Debug log
     setSelectedSpecificService(serviceId);
+    setSelectedServiceName(service.name);
     setSelectionStep("map");
     setMapDimmed(false);
 
@@ -565,6 +654,7 @@ function Locator() {
   const resetSelection = () => {
     setSelectedCategory(null);
     setSelectedSpecificService(null);
+    setSelectedServiceName(null);
     setSelectionStep("category");
     setMapDimmed(true);
   };
@@ -750,28 +840,22 @@ function Locator() {
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-80 overflow-y-auto pr-2">
-                  {serviceCategories
-                    .find(c => c.id === selectedCategory)
-                    ?.services.map((service, index) => (
-                      <motion.div
-                        key={index}
-                        whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleSpecificServiceSelect(service)}
-                        className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-all duration-300 border border-gray-200"
-                      >
-                        <div className="flex justify-between items-start">
-                          <h4 className="text-lg font-semibold text-gray-800">
-                            {service.name}
-                          </h4>
-                          <div className="text-right">
-                            <span className="text-lg font-bold text-blue-600">
-                              {service.price}
-                            </span>
-                            <p className="text-xs text-gray-500">
-                              {service.timeEstimate}
-                            </p>
-                          </div>
+                  {getMergedServices(selectedCategory).map((service, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleSpecificServiceSelect(service)}
+                      className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-all duration-300 border border-gray-200"
+                    >
+                      <div className="flex justify-between items-start">
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {service.name}
+                        </h4>
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-blue-600">{service.price}</span>
+                          <p className="text-xs text-gray-500">{service.timeEstimate}</p>
+                        </div>
                         </div>
                         <p className="text-gray-600 my-3">{service.description}</p>
                         <div className="flex justify-between items-center mt-4 text-sm">

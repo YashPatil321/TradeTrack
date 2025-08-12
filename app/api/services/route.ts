@@ -67,6 +67,8 @@ export async function POST(req: NextRequest) {
     
     // Parse request body
     const body = await req.json();
+    // Allow optional contact fields
+    const { phoneNumber, contactEmail } = body as { phoneNumber?: string; contactEmail?: string };
     
     // Validate trade type
     const ALLOWED_TRADES = ["plumber", "electrician", "handyman", "painter"];
@@ -107,6 +109,30 @@ export async function POST(req: NextRequest) {
     
     // Add the user's email to the service
     body.userEmail = session.user.email;
+    if (phoneNumber) body.phoneNumber = phoneNumber;
+    if (contactEmail) body.contactEmail = contactEmail;
+
+    // If no valid coordinates but we have an address, geocode server-side once
+    const hasValidCoords = body?.location?.type === 'Point' && Array.isArray(body?.location?.coordinates) &&
+      typeof body.location.coordinates[0] === 'number' && typeof body.location.coordinates[1] === 'number' &&
+      !(body.location.coordinates[0] === 0 && body.location.coordinates[1] === 0);
+
+    if (!hasValidCoords && typeof body.mainLocation === 'string' && body.mainLocation.trim().length > 0) {
+      try {
+        const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (apiKey) {
+          const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(body.mainLocation)}&key=${apiKey}`;
+          const resp = await fetch(url);
+          const data = await resp.json();
+          if (data.status === 'OK' && data.results && data.results[0]) {
+            const loc = data.results[0].geometry.location;
+            body.location = { type: 'Point', coordinates: [loc.lng, loc.lat] };
+          }
+        }
+      } catch (e) {
+        console.warn('Server geocoding failed, continuing without coordinates:', e);
+      }
+    }
     
     // Create the new service
     const newService = await Service.create(body);

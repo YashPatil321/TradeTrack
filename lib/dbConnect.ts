@@ -38,7 +38,14 @@ async function dbConnect() {
 
   try {
     cached.conn = await cached.promise;
-    console.log('Connected to MongoDB');
+    try {
+      const conn = mongoose.connection as any;
+      const dbName = conn?.name;
+      const host = conn?.host || conn?.client?.s?.url || 'unknown-host';
+      console.log('Connected to MongoDB', { db: dbName, host });
+    } catch {
+      console.log('Connected to MongoDB');
+    }
     return cached.conn;
   } catch (err) {
     console.error('MongoDB connection failed:', err);

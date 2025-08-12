@@ -42,6 +42,7 @@ function ReviewSubmissionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [missingFields, setMissingFields] = useState<string[]>([]);
 
   useEffect(() => {
     // Pre-fill form with URL parameters
@@ -83,13 +84,20 @@ function ReviewSubmissionForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.rating === 0) {
-      setSubmitError('Please select an overall rating');
+    // Client-side validation of required fields
+    const required: Array<keyof ReviewFormData> = [
+      'customerEmail', 'customerName', 'bookingId', 'serviceName', 'providerName', 'rating'
+    ];
+    const missing = required.filter((k) => !formData[k] || (k === 'rating' && formData.rating === 0));
+    if (missing.length) {
+      setMissingFields(missing.map(String));
+      setSubmitError('Please fill the required fields highlighted below.');
       return;
     }
 
     setIsSubmitting(true);
     setSubmitError('');
+    setMissingFields([]);
 
     try {
       const response = await fetch('/api/reviews/submit', {
@@ -176,6 +184,64 @@ function ReviewSubmissionForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
+            {/* If any required autofill is missing, show inputs so user can complete them */}
+            {(missingFields.length > 0 || !formData.customerEmail || !formData.customerName || !formData.providerName || !formData.serviceName || !formData.bookingId) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
+                <p className="text-amber-800 text-sm">Some details were not provided in the link. Please complete the required fields below.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Your Email *</label>
+                    <input
+                      type="email"
+                      value={formData.customerEmail}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
+                      className={`w-full p-3 border rounded-lg bg-white text-black ${missingFields.includes('customerEmail') ? 'border-red-400' : 'border-gray-300'}`}
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Your Name *</label>
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                      className={`w-full p-3 border rounded-lg bg-white text-black ${missingFields.includes('customerName') ? 'border-red-400' : 'border-gray-300'}`}
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Provider Name *</label>
+                    <input
+                      type="text"
+                      value={formData.providerName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, providerName: e.target.value }))}
+                      className={`w-full p-3 border rounded-lg bg-white text-black ${missingFields.includes('providerName') ? 'border-red-400' : 'border-gray-300'}`}
+                      placeholder="e.g., Tony's Handyman Services"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Service Name *</label>
+                    <input
+                      type="text"
+                      value={formData.serviceName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, serviceName: e.target.value }))}
+                      className={`w-full p-3 border rounded-lg bg-white text-black ${missingFields.includes('serviceName') ? 'border-red-400' : 'border-gray-300'}`}
+                      placeholder="e.g., 15AMP Wall Outlet Upgrade Package"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-black mb-1">Booking ID *</label>
+                    <input
+                      type="text"
+                      value={formData.bookingId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bookingId: e.target.value }))}
+                      className={`w-full p-3 border rounded-lg bg-white text-black ${missingFields.includes('bookingId') ? 'border-red-400' : 'border-gray-300'}`}
+                      placeholder="Paste your booking ID"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Overall Rating */}
             <div className="space-y-2">
               <label className="block text-lg font-semibold text-black mb-2">
@@ -213,14 +279,14 @@ function ReviewSubmissionForm() {
 
             {/* Written Review */}
             <div>
-              <label className="block text-lg font-semibold text-gray-800 mb-3">
+              <label className="block text-lg font-semibold text-black mb-3">
                 Tell us about your experience
               </label>
               <textarea
                 value={formData.reviewText}
                 onChange={(e) => setFormData(prev => ({ ...prev, reviewText: e.target.value }))}
                 placeholder="Share details about the service quality, professionalism, and your overall experience..."
-                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white text-black placeholder-gray-400"
                 rows={4}
                 maxLength={1000}
               />
@@ -262,8 +328,15 @@ function ReviewSubmissionForm() {
 
             {/* Error Message */}
             {submitError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-600">{submitError}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+                <p className="text-red-600 font-medium">{submitError}</p>
+                {missingFields.length > 0 && (
+                  <ul className="list-disc list-inside text-red-700 text-sm">
+                    {missingFields.map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 
