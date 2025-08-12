@@ -83,20 +83,22 @@ export async function GET(req: NextRequest) {
     const serviceId = searchParams.get('serviceId');
     const date = searchParams.get('date');
     
-    // If serviceId and date are provided, return available times for that service/date
+    // If serviceId and date are provided, return booked times for that service/date
     if (serviceId && date) {
       // Get existing bookings for this service and date
       const existingBookings = await Booking.find({
         serviceId,
         date,
         status: { $ne: 'cancelled' }
-      }).select('time');
-      
-      const bookedTimes = existingBookings.map(booking => booking.time);
-      
+      }).select('time serviceDuration');
+
+      const bookedTimes = existingBookings.map(b => b.time);
+      const bookings = existingBookings.map(b => ({ time: b.time, serviceDuration: b.serviceDuration || 1 }));
+
       return NextResponse.json({
         success: true,
-        bookedTimes
+        bookedTimes,
+        bookings
       });
     }
     

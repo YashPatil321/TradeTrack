@@ -228,6 +228,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [scheduleError, setScheduleError] = useState<string>('');
   const [disclaimerAccepted, setDisclaimerAccepted] = useState<boolean>(false);
 
   const resetForm = () => {
@@ -299,7 +300,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
         const response = await fetch(`/api/bookings?serviceId=${service._id}&date=${selectedDate}`);
         if (response.ok) {
           const data = await response.json();
-          const bookedTimes = data.bookedSlots || [];
+          const bookedTimes = data.bookedTimes || [];
           
           // Calculate blocked slots including service duration + 1-hour buffer
           const blockedSlots = new Set<string>();
@@ -310,7 +311,6 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
             
             console.log('Processing booking:', {
               time: bookingTime,
-              serviceName: booking.serviceName,
               serviceDuration: serviceDuration,
               rawServiceDuration: booking.serviceDuration
             });
@@ -368,6 +368,11 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
             }
           });
           
+          // Ensure explicitly booked start times are blocked as well
+          for (const t of bookedTimes) {
+            blockedSlots.add(t);
+          }
+
           setBookedSlots(Array.from(blockedSlots));
         }
       } catch (error) {
@@ -398,6 +403,34 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
 
   // Step navigation
   const nextStep = () => {
+    // Inline validation when leaving Schedule (step 2)
+    if (currentStep === 2) {
+      if (!selectedDate) {
+        setScheduleError('Please select a date.');
+        return;
+      }
+      if (!selectedTime) {
+        setScheduleError('Please select a time.');
+        return;
+      }
+      // Ensure selected time is still available (race-condition safe)
+      const isBlocked = bookedSlots.includes(selectedTime);
+      if (isBlocked) {
+        setScheduleError('That time just became unavailable. Please choose another.');
+        return;
+      }
+      // Ensure the booking won’t pass 6 PM
+      const svc = getSelectedServiceDetails();
+      const time24 = convertTo24Hour(selectedTime);
+      const [hStr, mStr] = time24.split(':');
+      const endHour = parseInt(hStr) + (svc.durationHours || 1);
+      if (endHour > 18) {
+        setScheduleError('This selection would extend past 6 PM. Please choose an earlier time.');
+        return;
+      }
+      setScheduleError('');
+    }
+
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
@@ -668,7 +701,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                       <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
                       <select
                         value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
+                        onChange={(e) => { setSelectedDate(e.target.value); setSelectedTime(''); setScheduleError(''); }}
                         className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         required
                       >
@@ -692,7 +725,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                       <label className="block text-sm font-medium text-gray-700 mb-2">Select Time</label>
                       <select
                         value={selectedTime}
-                        onChange={(e) => setSelectedTime(e.target.value)}
+                        onChange={(e) => { setSelectedTime(e.target.value); setScheduleError(''); }}
                         className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                         required
                         disabled={!selectedDate}
@@ -704,6 +737,9 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                       </select>
                       {selectedDate && availableSlots.length === 0 && (
                         <p className="text-sm text-red-600 mt-1">No available slots for this date</p>
+                      )}
+                      {scheduleError && (
+                        <p className="text-sm text-red-600 mt-1">{scheduleError}</p>
                       )}
                     </div>
                   </div>
