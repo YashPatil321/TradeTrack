@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/dbConnect';
 import Booking from '@/models/Booking';
+import Service from '@/models/Service';
 import { google } from 'googleapis';
 
 /**
@@ -145,9 +146,10 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
-
-    await dbConnect();
     
+    // Connect to database first
+    await dbConnect();
+
     const body = await req.json();
     console.log('=== API BOOKING DEBUG ===');
     console.log('Received booking data:', body);
@@ -161,6 +163,18 @@ export async function POST(req: NextRequest) {
       description, clientName, clientPhone, clientEmail, specialInstructions,
       address, status, paymentStatus
     } = body;
+    
+    // Get the service to fetch provider's email
+    const service = await Service.findById(serviceId);
+    if (!service) {
+      return NextResponse.json(
+        { success: false, error: 'Service not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Use provider's contact email if available, otherwise fall back to service owner's email
+    const providerEmail = service.contactEmail || service.userEmail;
     
     // Validate required fields
     if (!userId || !serviceId || !serviceName || !amount || !userEmail || !customerEmail || 
@@ -310,7 +324,7 @@ export async function POST(req: NextRequest) {
       await sendEmail(customerEmail, customerEmailSubject, customerEmailContent);
       
       // Provider notification email (if provider has email)
-      if (providerName && providerName !== 'Unknown Provider') {
+      if (providerName && providerName !== 'Unknown Provider' && providerEmail) {
         const providerEmailSubject = `New TradesMonk Booking - ${serviceName}`;
         const providerEmailContent = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #000;">
@@ -348,13 +362,12 @@ export async function POST(req: NextRequest) {
           </div>
         `;
         
-        // Send provider notification to provider's email if provided, otherwise fallback to configured EMAIL_USER
-        const providerEmail = (body && body.providerEmail) ? body.providerEmail : process.env.EMAIL_USER;
-        if (providerEmail && isValidEmail(providerEmail)) {
+        // Send provider notification to provider's email
+        if (isValidEmail(providerEmail)) {
           console.log('Sending provider notification email to:', providerEmail);
           await sendEmail(providerEmail, providerEmailSubject, providerEmailContent);
         } else {
-          console.warn('No valid provider email configured, skipping provider notification');
+          console.warn('No valid provider email available, skipping provider notification');
         }
       }
       

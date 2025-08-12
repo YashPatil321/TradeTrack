@@ -332,13 +332,15 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
               endTime: `${Math.floor((startMinutes + totalBlockTime) / 60)}:${String((startMinutes + totalBlockTime) % 60).padStart(2, '0')}`
             });
             
+            // Block all 30-minute slots that overlap with the booking + buffer
             const blockedTimesList = [];
             for (let i = 0; i < totalBlockTime; i += 30) { // 30-minute intervals
               const blockedMinutes = startMinutes + i;
               const blockedHours = Math.floor(blockedMinutes / 60);
               const remainingMinutes = blockedMinutes % 60;
               
-              if (blockedHours >= 9 && blockedHours <= 17) { // Within business hours
+              // Only block times within business hours (9 AM - 5 PM)
+              if (blockedHours >= 9 && blockedHours <= 17) {
                 const blockedTime = convertTo12Hour(`${blockedHours.toString().padStart(2, '0')}:${remainingMinutes.toString().padStart(2, '0')}`);
                 blockedSlots.add(blockedTime);
                 blockedTimesList.push(blockedTime);
@@ -347,6 +349,24 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
             
             console.log('Blocked time slots for this booking:', blockedTimesList);
           }
+          
+          // Also block any time slots that would make the booking extend past 6 PM
+          const allTimeSlots = [
+            '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+            '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
+            '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM'
+          ];
+          
+          allTimeSlots.forEach(time => {
+            const time24 = convertTo24Hour(time);
+            const [hours, minutes] = time24.split(':').map(Number);
+            const serviceHours = getSelectedServiceDetails().durationHours || 1;
+            
+            // Check if this start time would make the service extend past 6 PM
+            if ((hours + serviceHours) > 18) { // 6 PM in 24-hour format
+              blockedSlots.add(time);
+            }
+          });
           
           setBookedSlots(Array.from(blockedSlots));
         }
@@ -357,7 +377,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
     };
     
     fetchBookedSlots();
-  }, [selectedDate, service?._id]);
+  }, [selectedDate, service?._id, selectedService]); // Add selectedService to dependencies to recalculate when service changes
   
   // Helper function to convert 12-hour to 24-hour format
   const convertTo24Hour = (time12h: string): string => {
@@ -402,6 +422,24 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
     // Enhanced validation for all required fields
     if (!selectedService || !selectedDate || !selectedTime || !clientInfo.name || !clientInfo.address || !clientInfo.email || !clientInfo.city || !clientInfo.zipCode) {
       alert('Please fill in all required fields including email, city, and zip code.');
+      return;
+    }
+    
+    // Validate booking time - ensure job completes by 6 PM
+    const serviceDetails = getSelectedServiceDetails();
+    const [hours, minutes] = selectedTime.split(':');
+    let hour = parseInt(hours);
+    const period = selectedTime.includes('PM') && hour < 12 ? 'PM' : 'AM';
+    
+    // Convert to 24-hour format for easier comparison
+    if (period === 'PM' && hour < 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    
+    const endHour = hour + (serviceDetails.durationHours || 1);
+    
+    // Check if booking would extend past 6 PM
+    if (endHour > 18) { // 6 PM in 24-hour format
+      alert(`This ${serviceDetails.duration} service cannot be booked for ${selectedTime} as it would extend past 6 PM. Please choose an earlier time.`);
       return;
     }
 
