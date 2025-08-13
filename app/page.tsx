@@ -70,60 +70,7 @@ const serviceCategories = [
     icon: "🔨",
     color: "#f6ad55",
     services: [
-      {
-        name: "15AMP Wall Outlet Upgrade Package",
-        description: "Complete upgrade of 20 wall outlets to modern 15AMP duplex with USB-A and USB-C ports. White outlets provided and installed professionally",
-        price: "$500",
-        timeEstimate: "4 hours"
-      },
-      {
-        name: "20AMP Wall Outlet Upgrade Package",
-        description: "Complete upgrade of 20 wall outlets to modern 20AMP duplex with USB-A and USB-C ports. White outlets provided and installed professionally",
-        price: "$500",
-        timeEstimate: "4 hours"
-      },
-      {
-        name: "Kitchen Faucet Replacement",
-        description: "Professional kitchen faucet installation and old faucet removal. Customer provides new faucet, we handle all plumbing connections",
-        price: "$300",
-        timeEstimate: "3 hours"
-      },
-      {
-        name: "Angle Valve Replacement Service",
-        description: "Complete hot and cold angle valve replacement for kitchen sink plus two bathroom vanities. All valves and fittings included",
-        price: "$500",
-        timeEstimate: "3 hours"
-      },
-      {
-        name: "Drywall Patch, Texture & Paint",
-        description: "Professional repair of 3 drywall patches including texture matching and paint touch-up for seamless wall restoration",
-        price: "$500",
-        timeEstimate: "3 hours"
-      },
-      {
-        name: "Complete Toilet Replacement",
-        description: "Full toilet replacement service including Home Depot pickup and old toilet disposal. Customer provides new toilet model",
-        price: "$300",
-        timeEstimate: "3 hours"
-      },
-      {
-        name: "Room LED Lighting with Channel",
-        description: "Premium LED strip lighting installation in ceiling channels for gaming rooms, kids rooms, or offices. Professional channel mounting included",
-        price: "$700",
-        timeEstimate: "6 hours"
-      },
-      {
-        name: "Room LED Lighting (No Channel)",
-        description: "LED strip lighting installation for gaming rooms, kids rooms, or offices. Direct ceiling mounting without channel system",
-        price: "$300",
-        timeEstimate: "4 hours"
-      },
-      {
-        name: "House Lock Change Service",
-        description: "Professional lock and door knob replacement for up to 10 doors including closets and bathrooms. Customer provides locks",
-        price: "$500",
-        timeEstimate: "5 hours"
-      }
+      
     ]
   },
   {
