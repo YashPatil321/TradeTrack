@@ -86,7 +86,7 @@ function ReviewSubmissionForm() {
     
     // Client-side validation of required fields
     const required: Array<keyof ReviewFormData> = [
-      'customerEmail', 'customerName', 'bookingId', 'serviceName', 'providerName', 'rating'
+      'customerEmail', 'customerName', 'bookingId', 'serviceName', 'serviceType', 'providerName', 'rating'
     ];
     const missing = required.filter((k) => !formData[k] || (k === 'rating' && formData.rating === 0));
     if (missing.length) {
@@ -185,7 +185,7 @@ function ReviewSubmissionForm() {
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* If any required autofill is missing, show inputs so user can complete them */}
-            {(missingFields.length > 0 || !formData.customerEmail || !formData.customerName || !formData.providerName || !formData.serviceName || !formData.bookingId) && (
+            {(missingFields.length > 0 || !formData.customerEmail || !formData.customerName || !formData.providerName || !formData.serviceName || !formData.serviceType || !formData.bookingId) && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
                 <p className="text-amber-800 text-sm">Some details were not provided in the link. Please complete the required fields below.</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,6 +228,20 @@ function ReviewSubmissionForm() {
                       className={`w-full p-3 border rounded-lg bg-white text-black ${missingFields.includes('serviceName') ? 'border-red-400' : 'border-gray-300'}`}
                       placeholder="e.g., 15AMP Wall Outlet Upgrade Package"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Service Type *</label>
+                    <select
+                      value={formData.serviceType}
+                      onChange={(e) => setFormData(prev => ({ ...prev, serviceType: e.target.value }))}
+                      className={`w-full p-3 border rounded-lg bg-white text-black ${missingFields.includes('serviceType') ? 'border-red-400' : 'border-gray-300'}`}
+                    >
+                      <option value="">Select type</option>
+                      <option value="handyman">Handyman</option>
+                      <option value="plumber">Plumber</option>
+                      <option value="electrician">Electrician</option>
+                      <option value="painter">Painter</option>
+                    </select>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-black mb-1">Booking ID *</label>
