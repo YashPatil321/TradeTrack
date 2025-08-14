@@ -102,25 +102,29 @@ function ProfileContent() {
     }
   };
 
-  // Fetch bookings data once authenticated
+  // Fetch only the authenticated user's bookings via server session API
   useEffect(() => {
-    async function fetchBookings() {
+    async function fetchUserBookings() {
       try {
         setIsLoading(true);
-        const res = await fetch("/api/bookings");
+        const res = await fetch("/api/bookings/user", { cache: 'no-store' });
         const json = await res.json();
         if (json.success) {
-          setBookings(json.data || []);
+          // Show client bookings for this user
+          setBookings(json.clientBookings || []);
+        } else {
+          setBookings([]);
         }
       } catch (error) {
-        console.error("Error fetching bookings:", error);
+        console.error("Error fetching user bookings:", error);
+        setBookings([]);
       } finally {
         setIsLoading(false);
       }
     }
 
     if (status === "authenticated" && session?.user?.email) {
-      fetchBookings();
+      fetchUserBookings();
     }
   }, [status, session]);
 

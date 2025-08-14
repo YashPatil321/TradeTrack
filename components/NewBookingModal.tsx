@@ -21,77 +21,22 @@ interface ClientInfo {
   specialInstructions: string;
 }
 
-// Comprehensive handyman services - matches home page services with exact durations
-const HANDYMAN_SERVICES = [
-  {
-    id: 'outlet-upgrade-package',
-    name: '15AMP Wall Outlet Upgrade Package',
-    price: 500,
-    duration: '4 hours',
-    durationHours: 4,
-    description: 'Complete upgrade of 10 wall outlets to modern 15AMP duplex with USB-A and USB-C ports. White outlets provided and installed professionally'
-  },
-  {
-    id: 'kitchen-faucet-replacement',
-    name: 'Kitchen Faucet Replacement',
-    price: 300,
-    duration: '3 hours',
-    durationHours: 3,
-    description: 'Professional kitchen faucet installation and old faucet removal. Customer provides new faucet, we handle all plumbing connections'
-  },
-  {
-    id: 'angle-valve-replacement',
-    name: 'Angle Valve Replacement Service',
-    price: 500,
-    duration: '3 hours',
-    durationHours: 3,
-    description: 'Complete hot and cold angle valve replacement for kitchen sink plus two bathroom vanities. All valves and fittings included'
-  },
-  {
-    id: 'drywall-patch-paint',
-    name: 'Drywall Patch, Texture & Paint',
-    price: 500,
-    duration: '3 hours',
-    durationHours: 3,
-    description: 'Professional repair of 3 drywall patches including texture matching and paint touch-up for seamless wall restoration'
-  },
-  {
-    id: 'toilet-replacement',
-    name: 'Complete Toilet Replacement',
-    price: 300,
-    duration: '3 hours',
-    durationHours: 3,
-    description: 'Full toilet replacement service including Home Depot pickup and old toilet disposal. Customer provides new toilet model'
-  },
-  {
-    id: 'led-lighting-with-channel',
-    name: 'Room LED Lighting with Channel',
-    price: 700,
-    duration: '6 hours',
-    durationHours: 6,
-    description: 'Premium LED strip lighting installation in ceiling channels for gaming rooms, kids rooms, or offices. Professional channel mounting included'
-  },
-  {
-    id: 'led-lighting-no-channel',
-    name: 'Room LED Lighting (No Channel)',
-    price: 300,
-    duration: '4 hours',
-    durationHours: 4,
-    description: 'LED strip lighting installation for gaming rooms, kids rooms, or offices. Direct ceiling mounting without channel system'
-  },
-  {
-    id: 'house-lock-change',
-    name: 'House Lock Change Service',
-    price: 500,
-    duration: '5 hours',
-    durationHours: 5,
-    description: 'Professional lock and door knob replacement for up to 10 doors including closets and bathrooms. Customer provides locks'
-  }
-];
+// Dynamic services loaded from DB based on trade (handyman/plumbing/electrician/painting)
+type TemplateService = {
+  id: string;
+  name: string;
+  price: number;
+  duration: string;
+  durationHours: number;
+  description: string;
+};
 
 export default function NewBookingModal({ service, selectedServiceType, isOpen, onCloseAction }: BookingModalProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
+  
+  // Templates fetched from DB and transformed for booking UI
+  const [templateServices, setTemplateServices] = useState<TemplateService[]>([]);
   
   // Check authentication when modal opens - improved logic to prevent infinite loops
   useEffect(() => {
@@ -198,7 +143,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
       
       return serviceMap[matchedService || ''] || 'general-handyman';
     }
-    return 'general-handyman';
+    return '';
   });
   
   // Clear sessionStorage after service is pre-selected
@@ -254,24 +199,103 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
     }
   }, [isOpen]);
 
+  // Fetch templates and build local service list
+  useEffect(() => {
+    if (!isOpen) return;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/service-templates');
+        const json = await res.json();
+        if (!json?.success || !Array.isArray(json.data)) return;
+        const trade = (service?.trade || 'handyman').toLowerCase();
+        const items = (json.data as any[])
+          .filter(t => (t?.trade || '').toLowerCase() === trade)
+          .map((t) => {
+            const name: string = t.name || '';
+            const slug = name
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/(^-|-$)/g, '');
+            // Parse price to number
+            const priceStr: string = typeof t.price === 'number' ? String(t.price) : (t.price || '0');
+            const priceNum = parseFloat(String(priceStr).replace(/[^0-9.]/g, '')) || 0;
+            // Parse time estimate e.g. "4 hours" -> 4
+            const timeEstimate: string = t.timeEstimate || '1 hour';
+            const match = String(timeEstimate).match(/(\d+(?:\.\d+)?)/);
+            const durationHours = match ? Math.ceil(parseFloat(match[1])) : 1;
+            return {
+              id: slug || name || Math.random().toString(36).slice(2),
+              name,
+              price: priceNum,
+              duration: timeEstimate,
+              durationHours,
+              description: t.description || ''
+            } as TemplateService;
+          });
+        setTemplateServices(items);
+
+        // Ensure a valid selection
+        const has = (id: string) => !!items.find((it) => it.id === id);
+        if (items.length) {
+          if (selectedService && has(selectedService)) return;
+          // Try match by selectedServiceType
+          if (selectedServiceType) {
+            const wanted = selectedServiceType.toLowerCase();
+            const byId = items.find(it => it.id === wanted);
+            if (byId) { setSelectedService(byId.id); return; }
+            const byName = items.find(it => it.name.toLowerCase().includes(wanted));
+            if (byName) { setSelectedService(byName.id); return; }
+          }
+          // Fallback to first
+          setSelectedService(items[0].id);
+        }
+      } catch (e) {
+        console.error('Failed to load service templates for booking modal', e);
+      }
+    };
+    load();
+  }, [isOpen, service?.trade, selectedServiceType]);
+
   // Get selected service details
-  const getSelectedServiceDetails = () => {
-    return HANDYMAN_SERVICES.find(s => s.id === selectedService) || HANDYMAN_SERVICES[5];
+  const getSelectedServiceDetails = (): TemplateService => {
+    const found = templateServices.find((s: TemplateService) => s.id === selectedService);
+    if (found) return found;
+    if (templateServices.length) return templateServices[0];
+    // Safe default to prevent undefined access
+    return {
+      id: 'default',
+      name: 'Selected Service',
+      price: 0,
+      duration: '1 hour',
+      durationHours: 1,
+      description: ''
+    };
   };
 
-  // Initialize dates and times
+  // Initialize dates and times (enforce Thu/Fri from 2025-08-21)
   useEffect(() => {
     if (!isOpen) return;
     
-    // Generate next 2 weeks (14 days) starting from tomorrow
-    const dates = [];
-    const today = new Date();
-    for (let i = 1; i <= 14; i++) { // Start from i=1 (tomorrow) instead of i=0 (today)
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push(date.toISOString().split('T')[0]);
+    // Earliest start date is Thu, Aug 28, 2025; only allow Thursdays(4) and Fridays(5)
+    // Use local time to avoid timezone shifts
+    const constraintStart = new Date(2025, 7, 28, 0, 0, 0, 0); // month is 0-indexed
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const start = new Date(Math.max(constraintStart.getTime(), tomorrow.getTime()));
+    const days: string[] = [];
+    // Generate up to next 60 days of eligible dates
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dow = d.getDay(); // 0=Sun ... 4=Thu 5=Fri
+      if (dow === 4 || dow === 5) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        days.push(`${y}-${m}-${day}`); // local YYYY-MM-DD
+      }
     }
-    setAvailableDates(dates);
+    setAvailableDates(days);
     
     // Generate 9-5 time slots
     const times = [
@@ -361,9 +385,9 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
             const time24 = convertTo24Hour(time);
             const [hours, minutes] = time24.split(':').map(Number);
             const serviceHours = getSelectedServiceDetails().durationHours || 1;
-            
-            // Check if this start time would make the service extend past 6 PM
-            if ((hours + serviceHours) > 18) { // 6 PM in 24-hour format
+            const startTotalMinutes = hours * 60 + minutes;
+            // Block if service would end after 6:00 PM (1080 minutes)
+            if (startTotalMinutes + serviceHours * 60 > 18 * 60) {
               blockedSlots.add(time);
             }
           });
@@ -383,6 +407,67 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
     
     fetchBookedSlots();
   }, [selectedDate, service?._id, selectedService]); // Add selectedService to dependencies to recalculate when service changes
+
+  // Auto-refresh booked slots while on the Schedule step so taken times disappear
+  useEffect(() => {
+    if (!isOpen || currentStep !== 2 || !selectedDate || !service?._id) return;
+    let cancelled = false;
+
+    const refresh = async () => {
+      try {
+        const response = await fetch(`/api/bookings?serviceId=${service._id}&date=${selectedDate}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        const bookedTimes = data.bookedTimes || [];
+
+        // Recompute blocked slots (service duration + 1h buffer, and end-by-6PM rule)
+        const blockedSlotsSet = new Set<string>();
+
+        for (const booking of (data.bookings || [])) {
+          const bookingTime = booking.time;
+          const serviceDuration = booking.serviceDuration || 1;
+          const timeIn24 = convertTo24Hour(bookingTime);
+          const [hours, minutes] = timeIn24.split(':').map(Number);
+          const startMinutes = hours * 60 + minutes;
+          const totalBlockTime = (serviceDuration + 1) * 60; // minutes
+          for (let i = 0; i < totalBlockTime; i += 30) {
+            const blockedMinutes = startMinutes + i;
+            const blockedHours = Math.floor(blockedMinutes / 60);
+            const remainingMinutes = blockedMinutes % 60;
+            if (blockedHours >= 9 && blockedHours <= 17) {
+              const blockedTime = convertTo12Hour(`${blockedHours.toString().padStart(2, '0')}:${remainingMinutes.toString().padStart(2, '0')}`);
+              blockedSlotsSet.add(blockedTime);
+            }
+          }
+        }
+
+        const allTimeSlots = [
+          '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+          '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
+          '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM'
+        ];
+        allTimeSlots.forEach(time => {
+          const time24 = convertTo24Hour(time);
+          const [h, m] = time24.split(':').map(Number);
+          const serviceHours = getSelectedServiceDetails().durationHours || 1;
+          const startTotalMinutes = h * 60 + m;
+          if (startTotalMinutes + serviceHours * 60 > 18 * 60) {
+            blockedSlotsSet.add(time);
+          }
+        });
+
+        for (const t of bookedTimes) blockedSlotsSet.add(t);
+        if (!cancelled) setBookedSlots(Array.from(blockedSlotsSet));
+      } catch (e) {
+        // silent
+      }
+    };
+
+    // Initial and periodic refresh every 10 seconds
+    refresh();
+    const id = setInterval(refresh, 10000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [isOpen, currentStep, selectedDate, service?._id, selectedService]);
   
   // Helper function to convert 12-hour to 24-hour format
   const convertTo24Hour = (time12h: string): string => {
@@ -653,7 +738,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Your Service</h3>
                   <div className="max-h-64 overflow-y-auto pr-2 space-y-3">
-                    {HANDYMAN_SERVICES.map((svc) => (
+                    {templateServices.map((svc: TemplateService) => (
                       <div
                         key={svc.id}
                         className={`p-4 border rounded-lg cursor-pointer transition-all ${
@@ -707,7 +792,9 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                       >
                         <option value="">Choose a date...</option>
                         {availableDates.map((date) => {
-                          const dateObj = new Date(date);
+                          // Parse as local date to avoid timezone shifting labels
+                          const [yy, mm, dd] = date.split('-').map(Number);
+                          const dateObj = new Date(yy, (mm || 1) - 1, dd || 1);
                           const formattedDate = dateObj.toLocaleDateString('en-US', {
                             weekday: 'long',
                             year: 'numeric',

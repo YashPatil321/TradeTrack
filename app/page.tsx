@@ -285,13 +285,13 @@ function Locator() {
 
   // Merge DB templates with hardcoded list for a category (DB at bottom)
   const getMergedServices = (categoryId: string) => {
-    const base = serviceCategories.find(c => c.id === categoryId)?.services || [];
+    // Exclusively use DB-driven templates to avoid hardcoded discrepancies
     const idToTrade: Record<string, string> = { plumbing: 'plumbing', handyman: 'handyman', electrician: 'electrician', painting: 'painting' };
     const trade = idToTrade[categoryId];
     const fromDb = serviceTemplates
       .filter((t) => t.trade === trade)
       .map((t) => ({ name: t.name, description: t.description, price: t.price, timeEstimate: t.timeEstimate }));
-    return [...base, ...fromDb];
+    return fromDb;
   };
 
   // Load Google Maps script and initialize the map
