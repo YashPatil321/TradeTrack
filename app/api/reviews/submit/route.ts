@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
+import dbConnect from '@/lib/dbConnect';
 import Review from '@/models/Review';
 
 interface ReviewSubmission {
@@ -18,17 +18,19 @@ interface ReviewSubmission {
   communication?: number;
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase();
+    await dbConnect();
 
     const reviewData: ReviewSubmission = await request.json();
 
-    // Validate required fields
+    // Validate required fields (include serviceType which the model requires)
     if (!reviewData.customerEmail || !reviewData.customerName || !reviewData.bookingId || 
-        !reviewData.serviceName || !reviewData.providerName || !reviewData.rating) {
+        !reviewData.serviceName || !reviewData.serviceType || !reviewData.providerName || !reviewData.rating) {
       return NextResponse.json(
-        { error: 'Missing required fields for review submission' },
+        { success: false, error: 'Missing required fields for review submission' },
         { status: 400 }
       );
     }
@@ -48,10 +50,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingReview) {
-      return NextResponse.json(
-        { error: 'A review has already been submitted for this booking' },
-        { status: 409 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'A review has already been submitted for this booking'
+      }, { status: 409 });
     }
 
     // Create new review
@@ -81,10 +83,10 @@ export async function POST(request: NextRequest) {
       reviewId: savedReview._id
     }, { status: 201 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error submitting review:', error);
     return NextResponse.json(
-      { error: 'Failed to submit review' },
+      { success: false, error: error?.message || 'Failed to submit review' },
       { status: 500 }
     );
   }
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
 // GET route to fetch reviews (for display purposes)
 export async function GET(request: NextRequest) {
   try {
-    await connectToDatabase();
+    await dbConnect();
 
     const { searchParams } = new URL(request.url);
     const providerName = searchParams.get('provider');
