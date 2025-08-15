@@ -68,19 +68,47 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
   
-  // Form state - Pre-select service based on what was clicked in popup
-  const [selectedService, setSelectedService] = useState<string>(() => {
-    // Check sessionStorage for selected service first
-    const storedService = typeof window !== 'undefined' ? sessionStorage.getItem('selectedServiceForBooking') : null;
-    console.log('Stored service from sessionStorage:', storedService); // Debug log
-    if (storedService && storedService !== 'general') {
-      console.log('Pre-selecting service:', storedService); // Debug log
-      return storedService;
+  // Helper to normalize stored selection
+  const getStoredServiceId = (): string => {
+    try {
+      const raw = typeof window !== 'undefined' ? sessionStorage.getItem('selectedServiceForBooking') : null;
+      if (!raw) return '';
+      // New format: JSON { serviceId, serviceName }
+      if (raw.trim().startsWith('{')) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.serviceId === 'string') return parsed.serviceId;
+      }
+      // Legacy format: plain string id
+      return raw;
+    } catch {
+      return '';
     }
-    
-    // Fallback to prop-based mapping
-    if (selectedServiceType) {
-      const serviceMap: { [key: string]: string } = {
+  };
+
+  const getStoredSelection = (): { serviceId?: string; serviceName?: string } => {
+    try {
+      const raw = typeof window !== 'undefined' ? sessionStorage.getItem('selectedServiceForBooking') : null;
+      if (!raw) return {};
+      if (raw.trim().startsWith('{')) return JSON.parse(raw);
+      return { serviceId: raw };
+    } catch {
+      return {};
+    }
+  };
+
+  // Form state - Pre-select service based on current context
+  const [selectedService, setSelectedService] = useState<string>(() => {
+    // 1) Prefer explicit prop from page (already a slug/id)
+    if (selectedServiceType && selectedServiceType !== 'general') return selectedServiceType;
+    // 2) Then sessionStorage (supports legacy and new JSON formats)
+    const storedId = getStoredServiceId();
+    if (storedId && storedId !== 'general') return storedId;
+    // 3) Fallback to map by heuristics if any
+    return '';
+  });
+
+  // Legacy heuristic mapping retained as a fallback when only a loose name is passed
+  const legacyServiceMap: { [key: string]: string } = {
         // Plumbing services
         'faucet': 'faucet-repair',
         'faucet repair': 'faucet-repair',
@@ -135,27 +163,22 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
         'touch-up painting': 'touch-up-painting',
         'cabinet painting': 'cabinet-painting',
         'painting': 'interior-painting'
-      };
-      
-      const lowerServiceType = selectedServiceType.toLowerCase();
-      const matchedService = serviceMap[lowerServiceType] || 
-        Object.keys(serviceMap).find(key => lowerServiceType.includes(key));
-      
-      return serviceMap[matchedService || ''] || 'general-handyman';
-    }
-    return '';
-  });
-  
-  // Clear sessionStorage after service is pre-selected
+  };
+
+  // If the prop changes while modal is open, reflect it
   useEffect(() => {
-    if (isOpen && selectedService && selectedService !== '') {
-      // Clear the stored service after it's been used for pre-selection
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem('selectedServiceForBooking');
-        }
-      }, 1000); // Small delay to ensure pre-selection works
+    if (!isOpen) return;
+    if (selectedServiceType && selectedServiceType !== 'general') {
+      setSelectedService(selectedServiceType);
+      return;
     }
+    const storedId = getStoredServiceId();
+    if (storedId && storedId !== 'general') setSelectedService(storedId);
+  }, [isOpen, selectedServiceType]);
+  
+  // Keep selection persisted; do not clear from sessionStorage automatically
+  useEffect(() => {
+    // no-op to preserve selection across UI components
   }, [isOpen, selectedService]);
   
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -238,15 +261,26 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
         const has = (id: string) => !!items.find((it) => it.id === id);
         if (items.length) {
           if (selectedService && has(selectedService)) return;
-          // Try match by selectedServiceType
+
+          // 1) Try prop selectedServiceType (id/slug) or by name match
           if (selectedServiceType) {
             const wanted = selectedServiceType.toLowerCase();
             const byId = items.find(it => it.id === wanted);
             if (byId) { setSelectedService(byId.id); return; }
-            const byName = items.find(it => it.name.toLowerCase().includes(wanted));
+            const byName = items.find(it => it.name.toLowerCase() === wanted || it.name.toLowerCase().includes(wanted));
             if (byName) { setSelectedService(byName.id); return; }
           }
-          // Fallback to first
+
+          // 2) Try stored selection JSON: id first, then name
+          const stored = getStoredSelection();
+          if (stored?.serviceId && has(stored.serviceId)) { setSelectedService(stored.serviceId); return; }
+          if (stored?.serviceName) {
+            const wantedName = stored.serviceName.toLowerCase();
+            const byName = items.find(it => it.name.toLowerCase() === wantedName || it.name.toLowerCase().includes(wantedName));
+            if (byName) { setSelectedService(byName.id); return; }
+          }
+
+          // 3) Fallback to first
           setSelectedService(items[0].id);
         }
       } catch (e) {

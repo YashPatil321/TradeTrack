@@ -232,8 +232,6 @@ function Locator() {
   const mapRef = useRef<HTMLDivElement>(null);
   // Cache for address -> coords to reduce repeated geocoding
   const geocodeCache = useRef<Map<string, { lat: number; lng: number }>>(new Map());
-  // Keep only one visible client service area circle
-  const serviceAreaCircleRef = useRef<google.maps.Circle | null>(null);
   // Service templates loaded from Mongo so new services show up automatically
   type ServiceTemplateItem = { trade: string; name: string; description: string; price: string; timeEstimate: string };
   const [serviceTemplates, setServiceTemplates] = useState<ServiceTemplateItem[]>([]);
@@ -245,60 +243,11 @@ function Locator() {
   const [selectedServiceName, setSelectedServiceName] = useState<string | null>(null);
   const [mapDimmed, setMapDimmed] = useState(true);
 
-  // Format a slug like "baseboard-replacement-12-12" to "Baseboard Replacement 12 12"
-  const formatServiceLabel = (id?: string | null, fallback?: string | null) => {
-    if (fallback && fallback.trim()) return fallback;
-    if (!id) return '';
-    const cleaned = id.replace(/--/g, ' - ').replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
-    return cleaned.replace(/\b\w/g, (m) => m.toUpperCase());
-  };
-
-  // After login, restore the modal the user had open or their pending booking
+  // Clean up any stored booking selections after login (but don't auto-open modal)
   useEffect(() => {
-    if (!session) return;
-    // Wait until services are loaded to resolve IDs
-    if (!services || services.length === 0) return;
-
-    try {
-      // Restore last selected specific service (id + name) for filtering and state
-      const selectedForBooking = sessionStorage.getItem('selectedServiceForBooking');
-      if (selectedForBooking) {
-        try {
-          const parsed = JSON.parse(selectedForBooking);
-          if (parsed?.serviceId) setSelectedSpecificService(parsed.serviceId);
-          if (parsed?.serviceName) setSelectedServiceName(parsed.serviceName);
-        } catch {}
-      }
-
-      const pending = sessionStorage.getItem('pendingBooking');
-      if (pending) {
-        const { serviceId, selectedServiceType } = JSON.parse(pending);
-        const svc = services.find(s => s._id === serviceId);
-        if (svc) {
-          setSelectedService(svc);
-          setSelectedSpecificService(selectedServiceType || null);
-          setIsModalOpen(true);
-          setSelectionStep('map');
-          setMapDimmed(false);
-        }
-        sessionStorage.removeItem('pendingBooking');
-        return;
-      }
-
-      const lastOpen = sessionStorage.getItem('lastOpenModalServiceId');
-      if (lastOpen) {
-        const svc = services.find(s => s._id === lastOpen);
-        if (svc) {
-          setSelectedService(svc);
-          setIsModalOpen(true);
-          setSelectionStep('map');
-          setMapDimmed(false);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to restore modal after login', e);
-    }
-  }, [session, services]);
+    // Clear any stored service selection to allow fresh start
+    sessionStorage.removeItem('selectedServiceForBooking');
+  }, []);
 
   // Fetch services from your backend API
   useEffect(() => {
@@ -351,10 +300,10 @@ function Locator() {
       const mapElement = document.getElementById("map") as HTMLElement;
       if (!mapElement) return;
       
-      // Create map with initial options - keep at state level until service selected
+      // Create map with initial options - stay at state level initially
       const newMap = new window.google.maps.Map(mapElement, {
-        zoom: 6, // State level zoom - don't zoom in until service selected
-        center: { lat: 32.7157, lng: -117.1611 }, // San Diego area default
+        zoom: 6, // State level zoom
+        center: { lat: 32.7157, lng: -117.1611 }, // San Diego area as default
         disableDefaultUI: true,
         styles: [
           {
@@ -365,8 +314,7 @@ function Locator() {
         ]
       });
       
-      // IMPORTANT: Don't auto-zoom to user location on page load
-      // Only zoom in when user actually selects a specific service
+      // Don't auto-zoom to user location on initial load - only when service is selected
       
       // Add zoom control
       newMap.setOptions({
@@ -424,7 +372,6 @@ function Locator() {
       marker.addListener("click", () => {
         setSelectedService(service);
         setIsModalOpen(true);
-        try { if (service._id) sessionStorage.setItem('lastOpenModalServiceId', service._id); } catch {}
       });
 
       newMarkers.push(marker);
@@ -531,9 +478,9 @@ function Locator() {
 
     setMarkers(newMarkers);
 
-    // Auto-fit only after a specific service is selected to prevent early zooming
-    const hasSpecificService = !!selectedServiceName;
-    if (hasSpecificService && newMarkers.length > 0) {
+    // Auto-fit only after user filters by trade/service to prevent random zooming
+    const hasFilter = !!selectedTrade || !!selectedServiceName;
+    if (hasFilter && newMarkers.length > 0) {
       try {
         map.fitBounds(bounds, 60);
         // If only one marker, set a reasonable zoom
@@ -602,16 +549,8 @@ function Locator() {
     'Touch-Up & Repair Painting': 'touch-up-painting'
   };
 
-  const serviceId = serviceNameToIdMap[service.name] || service.name.toLowerCase().replace(/[^a-z0-9]/g, '-'); // Generate ID from name if not found
+  const serviceId = serviceNameToIdMap[service.name] || 'furniture-assembly'; // Default to first handyman service
   console.log('Selected service:', service.name, '-> ID:', serviceId); // Debug log
-  
-  // Store service selection for booking modal
-  sessionStorage.setItem('selectedServiceForBooking', JSON.stringify({
-    serviceId: serviceId,
-    serviceName: service.name,
-    servicePrice: service.price,
-    serviceDescription: service.description
-  }));
   setSelectedSpecificService(serviceId);
   setSelectedServiceName(service.name);
   setSelectionStep("map");
@@ -628,17 +567,6 @@ const resetSelection = () => {
   setSelectedServiceName(null);
   setSelectionStep("category");
   setMapDimmed(true);
-  // Remove any existing service area ring and reset map view
-  try {
-    if (serviceAreaCircleRef.current) {
-      serviceAreaCircleRef.current.setMap(null);
-      serviceAreaCircleRef.current = null;
-    }
-    if (map) {
-      map.setZoom(6);
-      map.setCenter({ lat: 32.7157, lng: -117.1611 });
-    }
-  } catch {}
 };
 
 // "Search Near Me" functionality: recenter map on user's location and zoom in
@@ -654,12 +582,8 @@ const searchNearMe = () => {
         map.setCenter(userLocation);
         map.setZoom(12); // Zoom in to show local area
         
-        // Maintain only one service area circle around user location
-        if (serviceAreaCircleRef.current) {
-          serviceAreaCircleRef.current.setMap(null);
-          serviceAreaCircleRef.current = null;
-        }
-        serviceAreaCircleRef.current = new window.google.maps.Circle({
+        // Add service area circle around user location
+        const clientServiceArea = new window.google.maps.Circle({
           strokeColor: '#1D4ED8',
           strokeOpacity: 0.8,
           strokeWeight: 2,
@@ -680,8 +604,7 @@ const searchNearMe = () => {
   }
 };
 
-  return (
-    <>
+// ... (rest of the code remains the same)
       <div className="fixed top-0 left-0 right-0 z-10 bg-black text-white shadow-md">
         <div className="container mx-auto flex justify-between items-center p-2">
           <Link href="/" legacyBehavior>
@@ -881,7 +804,7 @@ const searchNearMe = () => {
               >
                 <div className="bg-white rounded-lg shadow-lg p-4 flex items-center space-x-4">
                   <div className="text-gray-800">
-                    <span className="font-medium">Showing:</span> {formatServiceLabel(selectedSpecificService, selectedServiceName)} providers
+                    <span className="font-medium">Showing:</span> {selectedSpecificService} providers
                   </div>
                   <button
                     onClick={resetSelection}
@@ -965,15 +888,10 @@ const searchNearMe = () => {
                     session ? (
                       <button
                         onClick={() => {
-                          // Store the selected service type for pre-selection in booking modal (normalized JSON)
-                          const serviceToBook = selectedSpecificService || 'furniture-assembly';
-                          try {
-                            sessionStorage.setItem('selectedServiceForBooking', JSON.stringify({
-                              serviceId: serviceToBook,
-                              serviceName: selectedServiceName || serviceToBook
-                            }));
-                          } catch {}
-                          console.log('Booking service:', serviceToBook);
+                          // Store the selected service type for pre-selection in booking modal
+                          const serviceToBook = selectedSpecificService || 'furniture-assembly'; // Default to first handyman service
+                          sessionStorage.setItem('selectedServiceForBooking', serviceToBook);
+                          console.log('Booking service:', serviceToBook); // Debug log
                           setIsBookingModalOpen(true);
                           setIsModalOpen(false);
                         }}
@@ -986,18 +904,13 @@ const searchNearMe = () => {
                       <button
                         onClick={() => {
                           // Store booking intent before redirecting to OAuth
-                          const serviceToBook = selectedSpecificService || 'furniture-assembly';
-                          try {
-                            sessionStorage.setItem('pendingBooking', JSON.stringify({
-                              serviceId: selectedService._id,
-                              serviceName: selectedService.name,
-                              selectedServiceType: serviceToBook
-                            }));
-                            sessionStorage.setItem('selectedServiceForBooking', JSON.stringify({
-                              serviceId: serviceToBook,
-                              serviceName: selectedServiceName || serviceToBook
-                            }));
-                          } catch {}
+                          const serviceToBook = selectedSpecificService || 'furniture-assembly'; // Default to first handyman service
+                          sessionStorage.setItem('pendingBooking', JSON.stringify({
+                            serviceId: selectedService._id,
+                            serviceName: selectedService.name,
+                            selectedServiceType: serviceToBook
+                          }));
+                          sessionStorage.setItem('selectedServiceForBooking', serviceToBook);
                           // Use NextAuth's signIn function - let NextAuth handle redirect automatically
                           signIn('google');
                         }}
