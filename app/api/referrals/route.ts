@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import User from '@/models/User';
+import User, { IUser } from '@/models/User';
 
 // GET /api/referrals?validate=TM-XXXXXX&customerEmail=foo@bar
 export async function GET(req: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const customerEmail = (searchParams.get('customerEmail') || '').trim().toLowerCase();
     if (!code) return NextResponse.json({ success: false, error: 'Code required' }, { status: 400 });
 
-    const referrer = await User.findOne({ referralCode: code }).lean();
+    const referrer = await User.findOne({ referralCode: code }).lean() as IUser | null;
     if (!referrer) return NextResponse.json({ success: false, error: 'Invalid referral code' }, { status: 404 });
     if (!referrer.referralEligible) {
       return NextResponse.json({ success: false, error: 'Referral program not enabled for this user' }, { status: 400 });

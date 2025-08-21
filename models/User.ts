@@ -1,5 +1,22 @@
 import mongoose from 'mongoose';
 
+// TypeScript interface for User document
+export interface IUser {
+  _id?: string;
+  email: string;
+  name: string;
+  role: 'user' | 'provider' | 'admin';
+  type: 'client' | 'provider' | 'both';
+  referralEligible: boolean;
+  referralCode?: string;
+  referredBy?: string;
+  referralCredits: number;
+  nextDiscountPercent: number;
+  hasBookedBefore: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -61,6 +78,6 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-const User = mongoose.models.User || mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
 
 export default User;
