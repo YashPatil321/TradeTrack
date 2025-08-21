@@ -262,6 +262,18 @@ function Locator() {
     if (!services || services.length === 0) return;
 
     try {
+      // Restore user location if it was previously stored
+      const storedLocation = sessionStorage.getItem('userLocation');
+      if (storedLocation) {
+        try {
+          const loc = JSON.parse(storedLocation);
+          if (loc.lat && loc.lng) {
+            setUserLocation(loc);
+            setUserTriggeredNearMe(true);
+          }
+        } catch {}
+      }
+
       // Restore last selected specific service (id + name) for filtering and state
       const selectedForBooking = sessionStorage.getItem('selectedServiceForBooking');
       if (selectedForBooking) {
@@ -269,6 +281,11 @@ function Locator() {
           const parsed = JSON.parse(selectedForBooking);
           if (parsed?.serviceId) setSelectedSpecificService(parsed.serviceId);
           if (parsed?.serviceName) setSelectedServiceName(parsed.serviceName);
+          // If we have both service selection and location, restore the map state
+          if (parsed?.serviceName && storedLocation) {
+            setSelectionStep('map');
+            setMapDimmed(false);
+          }
         } catch {}
       }
 
@@ -301,6 +318,31 @@ function Locator() {
       console.warn('Failed to restore modal after login', e);
     }
   }, [session, services]);
+
+  // Restore map state (zoom and circle) after location is restored from sessionStorage
+  useEffect(() => {
+    if (!map || !userLocation || !userTriggeredNearMe) return;
+    
+    // Restore the map zoom and center to user location
+    map.setCenter(userLocation);
+    map.setZoom(12);
+    
+    // Recreate the service area circle
+    if (serviceAreaCircleRef.current) {
+      serviceAreaCircleRef.current.setMap(null);
+      serviceAreaCircleRef.current = null;
+    }
+    serviceAreaCircleRef.current = new window.google.maps.Circle({
+      strokeColor: '#1D4ED8',
+      strokeOpacity: 0.8,
+      strokeWeight: 2,
+      fillColor: '#3B82F6',
+      fillOpacity: 0.1,
+      map: map,
+      center: userLocation,
+      radius: 16093.4 // 10 miles in meters
+    });
+  }, [map, userLocation, userTriggeredNearMe]);
 
   // Fetch services from your backend API
   useEffect(() => {
@@ -680,6 +722,9 @@ const searchNearMe = () => {
         if (!map) return;
         const loc = { lat: latitude, lng: longitude };
         setUserLocation(loc);
+        
+        // Store location in sessionStorage for persistence across reloads
+        sessionStorage.setItem('userLocation', JSON.stringify(loc));
         
         // Center map on user location and zoom in for service search
         map.setCenter(loc);
