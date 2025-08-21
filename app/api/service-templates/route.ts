@@ -100,6 +100,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data: items });
   } catch (err: any) {
     console.error('ServiceTemplate GET error:', err);
-    return NextResponse.json({ error: 'Failed to fetch service templates' }, { status: 500 });
+    // Graceful fallback so UI continues working: curated defaults
+    const fallback = [
+      // Handyman
+      { trade: 'handyman', name: '15AMP Wall Outlet Upgrade Package', description: 'Upgrade 20 outlets to modern 15AMP with USB-A/C. White outlets included.', price: '$500', timeEstimate: '4 hours' },
+      { trade: 'handyman', name: 'Kitchen Faucet Replacement', description: 'Remove old and install customer-provided kitchen faucet.', price: '$300', timeEstimate: '3 hours' },
+      { trade: 'handyman', name: 'Drywall Patch, Texture & Paint', description: 'Repair 3 drywall patches with texture match and paint touch-up.', price: '$500', timeEstimate: '3 hours' },
+      { trade: 'handyman', name: 'House Lock Change Service', description: 'Replace locks/door knobs for up to 10 doors (customer provides locks).', price: '$500', timeEstimate: '5 hours' },
+      // Plumbing
+      { trade: 'plumbing', name: 'Faucet Repair & Replacement', description: 'Cartridge replacement, seal fixes, or full faucet install.', price: '$85', timeEstimate: '2 hours' },
+      { trade: 'plumbing', name: 'Toilet Repair & Installation', description: 'Troubleshoot and repair or replace toilet with new wax ring.', price: '$120', timeEstimate: '3 hours' },
+      { trade: 'plumbing', name: 'Drain Cleaning & Unclogging', description: 'Snake and clean kitchen/bath drains or main lines.', price: '$95', timeEstimate: '2 hours' },
+      // Electrician
+      { trade: 'electrician', name: 'Outlet Installation & Repair', description: 'Install/repair standard, GFCI, or USB outlets.', price: '$95', timeEstimate: '1 hour' },
+      { trade: 'electrician', name: 'Light Switch Installation', description: 'Install/replace dimmer, smart, or three-way switches.', price: '$85', timeEstimate: '1 hour' },
+      { trade: 'electrician', name: 'Ceiling Fan Installation', description: 'Mount and wire ceiling fan, balance and test.', price: '$120', timeEstimate: '3 hours' },
+      // Painting
+      { trade: 'painting', name: 'Interior Room Painting', description: 'Prep, prime, and paint interior room with trim.', price: '$180', timeEstimate: '5 hours' },
+      { trade: 'painting', name: 'Touch-Up & Repair Painting', description: 'Fill nail holes, minor repairs, and color match touch-ups.', price: '$80', timeEstimate: '1 hour' },
+    ];
+    return NextResponse.json({ success: true, data: fallback, warning: 'DB unavailable, returning fallback templates' });
   }
 }

@@ -33,6 +33,7 @@ export default function BookingModal({ service, isOpen, onCloseAction }: Booking
   const [loading, setLoading] = useState(false);
   const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
   const [selectedService, setSelectedService] = useState<ServiceOption | null>(null);
+  const [referralCode, setReferralCode] = useState<string>("");
   
   // Refs for interactive elements
   const serviceSelectRef = React.useRef<HTMLSelectElement>(null);
@@ -296,6 +297,24 @@ export default function BookingModal({ service, isOpen, onCloseAction }: Booking
           {timeSlots.length > 0 && !timeSlots.some(slot => slot.available) && (
             <p className="text-red-500 text-sm mt-2">No available slots for this date. Please try another date.</p>
           )}
+
+          {/* Referral Code Input */}
+          <div className="mt-5">
+            <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-1">
+              Referral code (optional)
+            </label>
+            <input
+              id="referralCode"
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value)}
+              placeholder="Enter code like TM-ABC123"
+              className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              inputMode="text"
+              autoCapitalize="characters"
+            />
+            <p className="text-xs text-gray-500 mt-1">Get 10% off your first booking with a friend’s code.</p>
+          </div>
         </div>
         
         <div className="flex justify-between">

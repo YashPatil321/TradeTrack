@@ -244,6 +244,8 @@ function Locator() {
   const [selectedSpecificService, setSelectedSpecificService] = useState<string | null>(null);
   const [selectedServiceName, setSelectedServiceName] = useState<string | null>(null);
   const [mapDimmed, setMapDimmed] = useState(true);
+  const [userTriggeredNearMe, setUserTriggeredNearMe] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Format a slug like "baseboard-replacement-12-12" to "Baseboard Replacement 12 12"
   const formatServiceLabel = (id?: string | null, fallback?: string | null) => {
@@ -531,9 +533,9 @@ function Locator() {
 
     setMarkers(newMarkers);
 
-    // Auto-fit only after a specific service is selected to prevent early zooming
-    const hasSpecificService = !!selectedServiceName;
-    if (hasSpecificService && newMarkers.length > 0) {
+    // Auto-fit only after user explicitly triggers location search to prevent early zooming
+    const shouldAutoFit = userTriggeredNearMe && !!selectedServiceName;
+    if (shouldAutoFit && newMarkers.length > 0) {
       try {
         map.fitBounds(bounds, 60);
         // If only one marker, set a reasonable zoom
@@ -545,7 +547,7 @@ function Locator() {
         console.warn('fitBounds failed', e);
       }
     }
-  }, [map, services, selectedTrade, selectionStep, selectedServiceName]);
+  }, [map, services, selectedTrade, selectionStep, selectedServiceName, userTriggeredNearMe]);
 
   // Handle category selection
   const handleCategorySelect = (categoryId: string) => {
@@ -628,6 +630,7 @@ const resetSelection = () => {
   setSelectedServiceName(null);
   setSelectionStep("category");
   setMapDimmed(true);
+  setUserTriggeredNearMe(false);
   // Remove any existing service area ring and reset map view
   try {
     if (serviceAreaCircleRef.current) {
@@ -643,15 +646,43 @@ const resetSelection = () => {
 
 // "Search Near Me" functionality: recenter map on user's location and zoom in
 const searchNearMe = () => {
+  // Mark that the user explicitly requested a location-based search
+  setUserTriggeredNearMe(true);
+  
+  // If we already have the user's location cached, use it without re-prompting
+  if (userLocation && map) {
+    const loc = userLocation;
+    map.setCenter(loc);
+    map.setZoom(12);
+    
+    // Maintain only one service area circle around user location
+    if (serviceAreaCircleRef.current) {
+      serviceAreaCircleRef.current.setMap(null);
+      serviceAreaCircleRef.current = null;
+    }
+    serviceAreaCircleRef.current = new window.google.maps.Circle({
+      strokeColor: '#1D4ED8',
+      strokeOpacity: 0.8,
+      strokeWeight: 2,
+      fillColor: '#3B82F6',
+      fillOpacity: 0.1,
+      map: map,
+      center: loc,
+      radius: 16093.4 // 10 miles in meters
+    });
+    return;
+  }
+
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         if (!map) return;
-        const userLocation = { lat: latitude, lng: longitude };
+        const loc = { lat: latitude, lng: longitude };
+        setUserLocation(loc);
         
         // Center map on user location and zoom in for service search
-        map.setCenter(userLocation);
+        map.setCenter(loc);
         map.setZoom(12); // Zoom in to show local area
         
         // Maintain only one service area circle around user location
@@ -666,11 +697,11 @@ const searchNearMe = () => {
           fillColor: '#3B82F6',
           fillOpacity: 0.1,
           map: map,
-          center: userLocation,
+          center: loc,
           radius: 16093.4 // 10 miles in meters
         });
       },
-      (error) => {
+      (error: GeolocationPositionError) => {
         console.error("Error getting location:", error);
         alert("Error getting your location. Please try again.");
       }

@@ -5,6 +5,8 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/models/Booking';
 import Service from '@/models/Service';
 import { google } from 'googleapis';
+import Promotion from '@/models/Promotion';
+import User from '@/models/User';
 
 /**
  * Send an email using the Gmail API
@@ -163,7 +165,9 @@ export async function POST(req: NextRequest) {
       userId, serviceId, serviceName, amount, price, userEmail, customerEmail,
       date, time, serviceType, providerName, estimatedTime, serviceDuration,
       description, clientName, clientPhone, clientEmail, specialInstructions,
-      address, status, paymentStatus
+      address, status, paymentStatus,
+      promoCode: rawPromoCode,
+      referralCode: rawReferralCode
     } = body;
     
     // Get the service to fetch provider's email
@@ -238,6 +242,69 @@ export async function POST(req: NextRequest) {
       );
     }
     
+    // Compute pricing with promotions/referrals
+    const normalizeCode = (c: string) => (c || '').trim().toUpperCase();
+    let promoCode = normalizeCode(rawPromoCode || '');
+    let referralCode = normalizeCode(rawReferralCode || '');
+    const originalAmount = Number(amount || price || 0);
+    let runningAmount = originalAmount;
+    let discountAmount = 0;
+    let discountPercentApplied = 0;
+    let referrerEmail: string | undefined;
+
+    // Apply promotion first (if any)
+    if (promoCode) {
+      const promo = await Promotion.findOne({ code: promoCode });
+      if (promo) {
+        const now = new Date();
+        const active = promo.active !== false && (!promo.startsAt || new Date(promo.startsAt) <= now) && (!promo.endsAt || new Date(promo.endsAt) >= now) && (!promo.usageLimit || promo.usageCount < promo.usageLimit);
+        if (active) {
+          let d = 0;
+          if (promo.type === 'percent') {
+            d = (runningAmount * (promo.value || 0)) / 100;
+            if (promo.maxDiscount && d > promo.maxDiscount) d = promo.maxDiscount;
+            discountPercentApplied += promo.value || 0;
+          } else {
+            d = Math.min(runningAmount, promo.value || 0);
+          }
+          d = Math.max(0, +d.toFixed(2));
+          runningAmount = Math.max(0, +(runningAmount - d).toFixed(2));
+          discountAmount += d;
+          // increment usage
+          await Promotion.updateOne({ _id: promo._id }, { $inc: { usageCount: 1 }, $set: { updatedAt: new Date() } });
+        } else {
+          // inactive code provided - ignore silently
+          promoCode = '';
+        }
+      } else {
+        // invalid code - ignore silently
+        promoCode = '';
+      }
+    }
+
+    // Apply referral (policy: first booking only, 10% off)
+    if (referralCode) {
+      const refUser = await User.findOne({ referralCode: referralCode });
+      const customerUser = await User.findOne({ email: customerEmail });
+      const isSelf = refUser && customerUser && refUser.email?.toLowerCase() === customerUser.email?.toLowerCase();
+      const eligible = refUser && customerUser && !customerUser.hasBookedBefore && !isSelf;
+      if (eligible) {
+        const perc = 10; // fixed policy
+        const d = Math.max(0, +((runningAmount * perc) / 100).toFixed(2));
+        runningAmount = Math.max(0, +(runningAmount - d).toFixed(2));
+        discountAmount += d;
+        discountPercentApplied += perc;
+        referrerEmail = refUser!.email;
+        // record relationships/credits
+        await User.updateOne({ _id: customerUser!._id }, { $set: { referredBy: refUser!.email, hasBookedBefore: true, updatedAt: new Date() } });
+        await User.updateOne({ _id: refUser!._id }, { $inc: { referralCredits: 1 }, $set: { updatedAt: new Date() } });
+      } else {
+        referralCode = '';
+      }
+    }
+
+    const finalAmount = Math.max(0, +runningAmount.toFixed(2));
+
     // Create new booking with all required fields
     const booking = new Booking({
       userId,
@@ -245,8 +312,12 @@ export async function POST(req: NextRequest) {
       serviceName,
       serviceType,
       providerName,
-      amount,
-      price,
+      amount: finalAmount,
+      price: finalAmount,
+      originalAmount,
+      finalAmount,
+      discountPercentApplied,
+      discountAmount,
       estimatedTime,
       serviceDuration,
       userEmail,
@@ -256,6 +327,8 @@ export async function POST(req: NextRequest) {
       clientName,
       clientPhone,
       clientEmail,
+      referralCodeUsed: referralCode || undefined,
+      referrerEmail: referrerEmail || undefined,
       address,
       date,
       time,

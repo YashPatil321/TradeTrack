@@ -198,6 +198,12 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [scheduleError, setScheduleError] = useState<string>('');
   const [disclaimerAccepted, setDisclaimerAccepted] = useState<boolean>(false);
+  // Promo/Referral state
+  const [promoCode, setPromoCode] = useState<string>('');
+  const [referralCode, setReferralCode] = useState<string>('');
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number; final: number } | null>(null);
+  const [referralApplied, setReferralApplied] = useState<{ code: string; percent: number; discount: number } | null>(null);
+  const [codeMsg, setCodeMsg] = useState<string>('');
 
   const resetForm = () => {
     setCurrentStep(1);
@@ -620,13 +626,19 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
       const userEmail = session?.user?.email || clientInfo.email;
       const customerEmail = clientInfo.email;
       
+      // Compute final with same order as backend: promo first, then referral
+      const promoDiscount = promoApplied?.discount || 0;
+      const afterPromo = Math.max(0, +(priceValue - promoDiscount).toFixed(2));
+      const referralDiscount = referralApplied?.percent ? +(afterPromo * (referralApplied.percent/100)).toFixed(2) : 0;
+      const finalTotal = Math.max(0, +(afterPromo - referralDiscount).toFixed(2));
+
       const bookingData = {
         // Required fields from schema
         userId: userEmail,
         serviceId: service._id,
         serviceName: serviceDetails.name,
-        amount: priceValue,
-        price: priceValue,
+        amount: finalTotal,
+        price: finalTotal,
         userEmail: userEmail,
         customerEmail: customerEmail,
         date: selectedDate,
@@ -657,7 +669,10 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
         
         // Status fields
         status: 'confirmed',
-        paymentStatus: 'pending'
+        paymentStatus: 'pending',
+        // Codes
+        promoCode: promoApplied?.code || '',
+        referralCode: referralApplied?.code || ''
       };
       
       // Debug logging
@@ -687,7 +702,7 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
       });
       
       if (response.ok) {
-        alert(`Booking confirmed!\n\nService: ${serviceDetails.name}\nDate: ${selectedDate}\nTime: ${selectedTime}\nTotal: $${serviceDetails.price}\n\n✅ IMPORTANT: Please pay ${service.name} in person when they arrive.\n\nYou will receive a confirmation email shortly.`);
+        alert(`Booking confirmed!\n\nService: ${serviceDetails.name}\nDate: ${selectedDate}\nTime: ${selectedTime}\nTotal: $${finalTotal.toFixed(2)}\n\n✅ IMPORTANT: Please pay ${service.name} in person when they arrive.\n\nYou will receive a confirmation email shortly.`);
         onCloseAction();
       } else {
         const errorData = await response.json();
@@ -711,6 +726,52 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
 
   const serviceDetails = getSelectedServiceDetails();
   const availableSlots = availableTimes.filter(time => !bookedSlots.includes(time));
+  const basePrice = typeof serviceDetails.price === 'string' ? parseFloat(String(serviceDetails.price).replace(/[^0-9.]/g, '')) || 0 : (serviceDetails.price as number) || 0;
+  const promoDiscount = promoApplied?.discount || 0;
+  const afterPromo = Math.max(0, +(basePrice - promoDiscount).toFixed(2));
+  const referralPercent = referralApplied?.percent || 0;
+  const referralDiscount = referralPercent ? +(afterPromo * (referralPercent/100)).toFixed(2) : 0;
+  const finalTotal = Math.max(0, +(afterPromo - referralDiscount).toFixed(2));
+
+  const handleApplyPromo = async () => {
+    setCodeMsg('');
+    const code = promoCode.trim();
+    if (!code) return;
+    try {
+      const res = await fetch(`/api/promotions?validate=${encodeURIComponent(code)}&amount=${basePrice}`);
+      const json = await res.json();
+      if (json.success) {
+        setPromoApplied({ code: json.data.code, discount: json.data.discount, final: json.data.final });
+        setCodeMsg('Promotion applied.');
+      } else {
+        setPromoApplied(null);
+        setCodeMsg(json.error || 'Invalid promotion code');
+      }
+    } catch (e) {
+      setPromoApplied(null);
+      setCodeMsg('Failed to validate promotion');
+    }
+  };
+
+  const handleApplyReferral = async () => {
+    setCodeMsg('');
+    const code = referralCode.trim();
+    if (!code) return;
+    try {
+      const res = await fetch(`/api/referrals?validate=${encodeURIComponent(code)}&customerEmail=${encodeURIComponent(clientInfo.email || session?.user?.email || '')}`);
+      const json = await res.json();
+      if (json.success) {
+        setReferralApplied({ code: json.data.code, percent: json.data.discountPercent || 10, discount: +(afterPromo * ((json.data.discountPercent || 10)/100)).toFixed(2) });
+        setCodeMsg('Referral code applied.');
+      } else {
+        setReferralApplied(null);
+        setCodeMsg(json.error || 'Invalid referral code');
+      }
+    } catch (e) {
+      setReferralApplied(null);
+      setCodeMsg('Failed to validate referral');
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto backdrop-blur-sm bg-black bg-opacity-75">
@@ -983,9 +1044,51 @@ export default function NewBookingModal({ service, selectedServiceType, isOpen, 
                       <span className="text-gray-800 font-medium">Duration:</span>
                       <span className="font-semibold text-gray-900">{serviceDetails.duration}</span>
                     </div>
+                    {/* Codes */}
+                    <div className="pt-3 border-t border-gray-200 grid md:grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Promotion code"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value)}
+                          className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                        />
+                        <button onClick={handleApplyPromo} className="px-3 py-2 bg-gray-800 text-white rounded hover:bg-black">Apply</button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Referral code"
+                          value={referralCode}
+                          onChange={(e) => setReferralCode(e.target.value)}
+                          className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                        />
+                        <button onClick={handleApplyReferral} className="px-3 py-2 bg-gray-800 text-white rounded hover:bg-black">Apply</button>
+                      </div>
+                      {codeMsg && <div className="md:col-span-2 text-xs text-gray-700">{codeMsg}</div>}
+                    </div>
+
+                    {/* Totals */}
+                    <div className="flex justify-between pt-3 text-gray-800">
+                      <span>Base price</span>
+                      <span>${basePrice.toFixed(2)}</span>
+                    </div>
+                    {promoApplied && (
+                      <div className="flex justify-between text-green-700">
+                        <span>Promotion ({promoApplied.code})</span>
+                        <span>- ${promoDiscount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {referralApplied && (
+                      <div className="flex justify-between text-green-700">
+                        <span>Referral ({referralApplied.code})</span>
+                        <span>- ${referralDiscount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-300">
                       <span className="text-gray-900">Total:</span>
-                      <span className="text-gray-900">${serviceDetails.price}</span>
+                      <span className="text-gray-900">${finalTotal.toFixed(2)}</span>
                     </div>
                   </div>
                   

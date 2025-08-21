@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/dbConnect';
 import { google } from 'googleapis';
+import User from '@/models/User';
 
 /**
  * Send an email using the Gmail API
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
     // Parse the request body
     const bookingData = await req.json();
     const { serviceId, serviceName, amount, email, description, address } = bookingData;
+    let { referralCode } = bookingData as { referralCode?: string };
 
     if (!serviceId || !serviceName || !amount || !email || !address) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
@@ -94,18 +96,63 @@ export async function POST(req: NextRequest) {
     const { default: Booking } = await import('@/models/Booking');
     const { default: Service } = await import('@/models/Service');
 
+    // Load current user from DB
+    const currentUserEmail = session.user.email as string;
+    const currentUser = await User.findOne({ email: currentUserEmail });
+
+    // If no explicit referralCode provided, try to extract from notes like TM-XXXXXX
+    if (!referralCode && address?.serviceNotes) {
+      const match = (address.serviceNotes as string).toUpperCase().match(/TM-[A-Z0-9]{6}/);
+      if (match) referralCode = match[0];
+    }
+
+    // Determine applicable discount percent
+    let discountPercent = 0;
+    let referrerEmail: string | undefined;
+
+    // If referralCode is provided and user hasn't booked before, apply referral discount
+    if (referralCode && currentUser && !currentUser.hasBookedBefore) {
+      const referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
+      if (referrer && referrer.email !== currentUser.email) {
+        // Friend gets 10% off their first booking
+        discountPercent = Math.max(discountPercent, 10);
+        referrerEmail = referrer.email;
+        // Grant referrer 10% off their next booking (do not stack above 10)
+        referrer.nextDiscountPercent = Math.max(referrer.nextDiscountPercent || 0, 10);
+        await referrer.save();
+
+        // Mark current user as referred and first booking
+        currentUser.referredBy = referrer.email;
+        // We'll set hasBookedBefore=true after successful save
+      }
+    }
+
+    // Also check if the current user has a pending discount
+    if (currentUser && (currentUser.nextDiscountPercent || 0) > 0) {
+      discountPercent = Math.max(discountPercent, Math.min(currentUser.nextDiscountPercent, 10));
+    }
+
     // Extract date and time from the address object if available
     const bookingDate = address?.date || null;
     const bookingTime = address?.time || null;
     
     console.log('Creating booking with date:', bookingDate, 'and time:', bookingTime);
     
+    // Calculate discount amounts
+    const originalAmount = Number(amount);
+    const discountAmount = discountPercent > 0 ? Number((originalAmount * (discountPercent / 100)).toFixed(2)) : 0;
+    const finalAmount = Number((originalAmount - discountAmount).toFixed(2));
+
     // Create the booking record without specifying _id (let MongoDB create the ObjectId)
     const booking = {
       userId: session.user.email || session.user.name,
       serviceId,
       serviceName,
-      amount,
+      amount: finalAmount,
+      originalAmount,
+      finalAmount,
+      discountPercentApplied: discountPercent,
+      discountAmount,
       customerEmail: email,
       description,
       // Include date and time in the address object if available
@@ -120,12 +167,24 @@ export async function POST(req: NextRequest) {
       status: 'pending',
       paymentStatus: 'pending',
       createdAt: new Date(),
+      referralCodeUsed: referralCode?.toUpperCase(),
+      referrerEmail,
     };
     
     console.log('Saving booking:', JSON.stringify(booking, null, 2));
 
     // Save the booking using Mongoose model
     const savedBooking = await new Booking(booking).save();
+
+    // Update current user state after a successful booking save
+    if (currentUser) {
+      if (!currentUser.hasBookedBefore) currentUser.hasBookedBefore = true;
+      if (currentUser.nextDiscountPercent && discountPercent >= currentUser.nextDiscountPercent) {
+        // Clear consumed next discount if it was applied (or matched)
+        currentUser.nextDiscountPercent = 0;
+      }
+      await currentUser.save();
+    }
 
     // Fetch the service provider's email
     console.log('Finding service with ID:', serviceId);
@@ -141,6 +200,11 @@ export async function POST(req: NextRequest) {
     const formattedDate = address.date ? new Date(address.date).toLocaleDateString() : 'Not specified';
     const formattedTime = address.time || 'Not specified';
     const additionalNotes = address.serviceNotes || 'None provided';
+    const pricingLine = discountPercent > 0
+      ? `<li><strong>Original Amount:</strong> $${originalAmount.toFixed(2)}</li>
+         <li><strong>Discount:</strong> ${discountPercent}% (-$${discountAmount.toFixed(2)})</li>
+         <li><strong>Total:</strong> $${finalAmount.toFixed(2)}</li>`
+      : `<li><strong>Amount:</strong> $${originalAmount.toFixed(2)}</li>`;
     
     // 1. Send email notification to the SERVICE PROVIDER if we have their email
     if (providerEmail) {
@@ -158,7 +222,7 @@ export async function POST(req: NextRequest) {
               <li><strong>Service:</strong> ${serviceName}</li>
               <li><strong>Date:</strong> ${formattedDate}</li>
               <li><strong>Time:</strong> ${formattedTime}</li>
-              <li><strong>Amount:</strong> $${amount.toFixed(2)}</li>
+              ${pricingLine}
               <li><strong>Customer Email:</strong> ${email}</li>
               <li><strong>Service Address:</strong> ${formattedAddress}</li>
               <li><strong>Additional Instructions:</strong> ${additionalNotes}</li>
@@ -200,7 +264,7 @@ export async function POST(req: NextRequest) {
             <li><strong>Service:</strong> ${serviceName}</li>
             <li><strong>Date:</strong> ${formattedDate}</li>
             <li><strong>Time:</strong> ${formattedTime}</li>
-            <li><strong>Amount Paid:</strong> $${amount.toFixed(2)}</li>
+            ${pricingLine}
             <li><strong>Service Address:</strong> ${formattedAddress}</li>
             <li><strong>Your Additional Instructions:</strong> ${additionalNotes}</li>
           </ul>
