@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "TradesMonk - Services Paused",
   description:
-    "TradesMonk services are paused. Our new site is moving to mantlekeep.com.",
+    "TradesMonk services are paused. Our new site is moving to mantelkeep.com.",
 };
 
 export default function PausedPage() {
@@ -18,13 +18,13 @@ export default function PausedPage() {
         </p>
         <p className="text-lg text-gray-700 mb-8">
           TradesMonk services are currently paused while we transition to our
-          new site, <span className="font-semibold">MantleKeep</span>.
+          new site, <span className="font-semibold">MantelKeep</span>.
         </p>
         <a
-          href="https://mantlekeep.com"
+          href="https://mantelkeep.com"
           className="inline-block rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700 transition-colors"
         >
-          Visit mantlekeep.com
+          Visit mantelkeep.com
         </a>
       </div>
     </main>
